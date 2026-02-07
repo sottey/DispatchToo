@@ -17,7 +17,6 @@ import {
   IconSun,
   IconMoon,
   IconBolt,
-  IconUser,
   IconPlus,
   IconHelp,
 } from "@/components/icons";
@@ -53,7 +52,6 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const [sectionsOpen, setSectionsOpen] = useState<Record<string, boolean>>({
     main: true,
     workspace: true,
-    utilities: true,
     account: true,
   });
 
@@ -78,6 +76,8 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(href + "/");
   }
+
+  const profileActive = isActive("/profile");
 
   const quickActions = [
     {
@@ -116,11 +116,6 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
       icon: IconSearch,
       onClick: onSearchOpen,
     },
-  ];
-
-  const utilities = [
-    { key: "search", label: "Search", icon: IconSearch, onClick: onSearchOpen },
-    { key: "shortcuts", label: "Shortcuts", icon: IconHelp, onClick: onShortcutHelp },
   ];
 
   return (
@@ -299,58 +294,6 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
           )}
         </div>
 
-        {/* Utilities section */}
-        <div className="pt-3 border-t border-neutral-800/50">
-          <button
-            onClick={() => toggleSection("utilities")}
-            className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center px-2" : "justify-between px-2"
-            }`}
-          >
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
-            >
-              Utilities
-            </span>
-            {!collapsed && (
-              <IconChevronDown
-                className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
-                  sectionsOpen.utilities ? "" : "-rotate-90"
-                }`}
-              />
-            )}
-          </button>
-
-          {(sectionsOpen.utilities || collapsed) && (
-            <ul className="space-y-0.5">
-              {utilities.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.key}>
-                    <button
-                      onClick={item.onClick}
-                      title={collapsed ? item.label : undefined}
-                      className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
-                        collapsed ? "justify-center px-2" : ""
-                      } text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200`}
-                    >
-                      <Icon className="w-5 h-5 flex-shrink-0" />
-                      <span
-                        className={`whitespace-nowrap transition-all duration-300 ${
-                          collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
       </nav>
 
       {/* Account section */}
@@ -380,46 +323,32 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
 
           {(sectionsOpen.account || collapsed) && (
             <ul className="space-y-0.5">
-              {/* User info */}
-              <li
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
-                  collapsed ? "justify-center px-2" : ""
-                }`}
-              >
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="w-5 h-5 rounded-full flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-neutral-700 flex-shrink-0" />
-                )}
-                <span
-                  className={`text-sm text-neutral-300 truncate whitespace-nowrap transition-all duration-300 ${
-                    collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                  }`}
-                >
-                  {session.user.name || session.user.email}
-                </span>
-              </li>
-
               {/* Profile */}
               <li>
                 <Link
                   href="/profile"
                   title={collapsed ? "Profile" : undefined}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors ${
-                    collapsed ? "justify-center px-2" : ""
-                  }`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+                    profileActive
+                      ? "bg-neutral-800/60 text-white"
+                      : "text-neutral-300 hover:bg-neutral-800/40 hover:text-neutral-200"
+                  } ${collapsed ? "justify-center px-2" : ""}`}
                 >
-                  <IconUser className="w-5 h-5 flex-shrink-0" />
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      className="w-5 h-5 rounded-full flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-neutral-700 flex-shrink-0" />
+                  )}
                   <span
-                    className={`whitespace-nowrap transition-all duration-300 ${
+                    className={`text-sm truncate whitespace-nowrap transition-all duration-300 ${
                       collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
                     }`}
                   >
-                    Profile
+                    {session.user.name || session.user.email}
                   </span>
                 </Link>
               </li>
@@ -444,6 +373,26 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                     }`}
                   >
                     {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </span>
+                </button>
+              </li>
+
+              {/* Shortcuts */}
+              <li>
+                <button
+                  onClick={onShortcutHelp}
+                  title={collapsed ? "Shortcuts" : undefined}
+                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors ${
+                    collapsed ? "justify-center px-2" : ""
+                  }`}
+                >
+                  <IconHelp className="w-5 h-5 flex-shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-300 ${
+                      collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    }`}
+                  >
+                    Shortcuts
                   </span>
                 </button>
               </li>

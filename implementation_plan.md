@@ -149,13 +149,27 @@ Upgrade the entire interface from functional-minimal to polished and interactive
 
 Targeted UX fixes and navigation balance across dashboard, tasks, and sidebar.
 
-- [ ] **9.1** Fix spacing in the Dashboard Recent Activity section between the text and the colored decoration.
-- [ ] **9.2** Audit dashboard widgets that link to the Tasks page — inventory the 4 task-linked widgets and document redundancy vs. notes/dispatches.
-- [ ] **9.3** Create a rebalancing plan for dashboard navigation emphasis — define which widgets should link to Tasks, Notes, and Dispatches (and how many of each).
-- [ ] **9.4** Implement the dashboard widget rebalance from the plan so task links are proportional to notes/dispatches.
-- [ ] **9.5** Revamp the Tasks page interactions so the flow feels cohesive and intentional (filters, row actions, status toggles, and detail/edit affordances).
-- [ ] **9.6** Eliminate the slight flicker when the Dashboard and Dispatch pages load.
-- [ ] **9.7** Add a User Profile page and link to it from the sidebar.
-- [ ] **9.8** Move the user profile section to the bottom of the sidebar.
-- [ ] **9.9** Introduce four Quick Add buttons in the top on the main menu of the sidebar, with the 4th button reserved for Search.
-- [ ] **9.10** When the search textbox appears, prevent the selection highlight from showing so it does not disrupt the UI aesthetic.
+- [x] **9.1** Fix spacing in the Dashboard Recent Activity section between the text and the colored decoration.
+- [x] **9.2** Audit dashboard widgets that link to the Tasks page — inventory the 4 task-linked widgets and document redundancy vs. notes/dispatches.
+- [x] **9.3** Create a rebalancing plan for dashboard navigation emphasis — define which widgets should link to Tasks, Notes, and Dispatches (and how many of each).
+- [x] **9.4** Implement the dashboard widget rebalance from the plan so task links are proportional to notes/dispatches.
+- [x] **9.5** Revamp the Tasks page interactions so the flow feels cohesive and intentional (filters, row actions, status toggles, and detail/edit affordances).
+- [x] **9.6** Eliminate the slight flicker when the Dashboard and Dispatch pages load.
+- [x] **9.7** Add a User Profile page and link to it from the sidebar.
+- [x] **9.8** Move the user profile section to the bottom of the sidebar.
+- [x] **9.9** Introduce four Quick Add buttons in the top on the main menu of the sidebar, with the 4th button reserved for Search.
+- [x] **9.10** When the search textbox appears, prevent the selection highlight from showing so it does not disrupt the UI aesthetic.
+
+## Phase 10: Projects & Profile Enrichment
+
+Introduce Projects as first-class groupings of tasks, tighten task/project synergy, and expand the Profile page.
+
+- [ ] **10.1** Design the `projects` table schema (id, userId, name, description, status, color, createdAt, updatedAt) and add `projectId` (nullable) to `tasks` with indexes.
+- [ ] **10.2** Generate and run a Drizzle migration for `projects` and the `tasks.projectId` column.
+- [ ] **10.3** Implement `/api/projects` CRUD and `/api/projects/[id]` endpoints; add `/api/projects/[id]/tasks` to list tasks by project; update `/api/tasks` to accept `projectId` filters and updates.
+- [ ] **10.4** Update Tasks UI to reflect project synergy: project filters, project badges in rows, and project-aware creation/edit flows.
+- [ ] **10.5** Build the Projects page: list + create/edit, project detail view with task list, stats, and quick actions.
+- [ ] **10.6** Add a collapsible "Projects" section in the sidebar that shows active projects (with counts) and highlights the current project.
+- [ ] **10.7** Add project signals to the dashboard (active project progress, recent project activity) without overpowering tasks/notes.
+- [ ] **10.8** Expand the Profile page content (account details, usage stats for tasks/notes/projects, preferences, and shortcuts).
+- [ ] **10.9** Add tests for projects API routes and tasks/projects integration (filters, assignment, ownership).
