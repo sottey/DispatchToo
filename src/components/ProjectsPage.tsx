@@ -11,6 +11,8 @@ import {
   IconTrash,
   IconCheckCircle,
   IconCalendar,
+  IconBolt,
+  IconClock,
 } from "@/components/icons";
 import { PROJECT_COLORS } from "@/lib/projects";
 
@@ -24,6 +26,15 @@ const PROJECT_STATUS_LABELS: Record<string, string> = {
   active: "Active",
   paused: "Paused",
   completed: "Completed",
+};
+
+const PROJECT_STATUS_ICONS: Record<
+  string,
+  (props: { className?: string }) => JSX.Element
+> = {
+  active: IconBolt,
+  paused: IconClock,
+  completed: IconCheckCircle,
 };
 
 export function ProjectsPage() {
@@ -97,6 +108,20 @@ export function ProjectsPage() {
     const qs = params.toString();
     router.replace(`/projects${qs ? "?" + qs : ""}`, { scroll: false });
   }, [searchParams, router]);
+
+  useEffect(() => {
+    if (!deletingId) return;
+    function handleCancel(event: MouseEvent) {
+      const target = event.target as Element | null;
+      const deleteButton = target?.closest("[data-project-delete]");
+      if (deleteButton?.getAttribute("data-project-delete") === deletingId) {
+        return;
+      }
+      setDeletingId(null);
+    }
+    document.addEventListener("mousedown", handleCancel);
+    return () => document.removeEventListener("mousedown", handleCancel);
+  }, [deletingId]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -270,6 +295,7 @@ export function ProjectsPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(selectedProject.id)}
+                        data-project-delete={selectedProject.id}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all active:scale-95 inline-flex items-center gap-1.5 ${
                           deletingId === selectedProject.id
                             ? "bg-red-600 text-white hover:bg-red-500"
@@ -435,6 +461,9 @@ export function ProjectsPage() {
               visibleProjects.map((project) => {
               const active = project.id === selectedId;
               const color = PROJECT_COLORS[project.color] ?? PROJECT_COLORS.blue;
+              const StatusIcon = PROJECT_STATUS_ICONS[project.status] ?? IconClock;
+              const statusLabel =
+                PROJECT_STATUS_LABELS[project.status] ?? project.status;
               return (
                 <button
                   key={project.id}
@@ -455,9 +484,12 @@ export function ProjectsPage() {
                       </p>
                     </div>
                     <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${color.soft}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200/70 dark:border-neutral-700/70 bg-white/70 dark:bg-neutral-900/60 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:text-neutral-300"
+                      title={statusLabel}
+                      aria-label={statusLabel}
                     >
-                      {PROJECT_STATUS_LABELS[project.status] ?? project.status}
+                      <StatusIcon className="w-3.5 h-3.5" />
+                      {statusLabel}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
