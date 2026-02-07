@@ -14,7 +14,6 @@ import {
   IconDocument,
   IconFolder,
   IconSearch,
-  IconChevronLeft,
   IconChevronDown,
   IconSignOut,
   IconSun,
@@ -24,6 +23,7 @@ import {
   IconHelp,
   IconInbox,
   IconTrash,
+  IconList,
 } from "@/components/icons";
 
 interface SidebarProps {
@@ -167,31 +167,40 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
       }`}
     >
       {/* Brand */}
-      <div className="flex items-center gap-3 px-4 h-14 flex-shrink-0 border-b border-neutral-800/50">
-        <Link
-          href="/"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          title="Go to Dashboard"
-        >
-          <IconBolt className="w-6 h-6 text-blue-400 flex-shrink-0" />
-          <span
-            className={`text-lg font-bold text-white whitespace-nowrap transition-all duration-300 ${
-              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-            }`}
+      <div className={`flex items-center h-14 flex-shrink-0 border-b border-neutral-800/50 ${
+        collapsed ? "justify-center" : "justify-between px-3"
+      }`}>
+        {!collapsed && (
+          <Link
+            href="/"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0"
+            title="Go to Dashboard"
           >
-            Dispatch
-          </span>
-        </Link>
+            <IconBolt className="w-6 h-6 text-blue-400 flex-shrink-0" />
+            <span className="text-lg font-bold text-white whitespace-nowrap">
+              Dispatch
+            </span>
+          </Link>
+        )}
+        <button
+          onClick={toggleCollapsed}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-800/40 hover:text-neutral-300 transition-colors flex-shrink-0"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <IconList className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 space-y-4 ${
+        collapsed ? "px-2" : "px-3"
+      }`}>
         {/* Overview section */}
         <div>
           <button
             onClick={() => toggleSection("main")}
             className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center px-2" : "justify-between px-2"
+              collapsed ? "justify-center" : "justify-between px-2"
             }`}
           >
             <span
@@ -212,24 +221,24 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
 
           {(sectionsOpen.main || collapsed) && (
             <div className="space-y-3">
-              <div
-                className={`flex items-center justify-center gap-2 px-3 ${collapsed ? "pt-1 pb-2" : "pt-2 pb-1"}`}
-              >
-                {quickActions.map((action) => {
-                  const ActionIcon = action.icon;
-                  return (
-                    <button
-                      key={action.key}
-                      onClick={action.onClick}
-                      title={action.label}
-                      aria-label={action.label}
-                      className={quickActionClassName}
-                    >
-                      <ActionIcon className="w-4 h-4 flex-shrink-0" />
-                    </button>
-                  );
-                })}
-              </div>
+              {!collapsed && (
+                <div className="flex items-center justify-center gap-2 px-3 pt-2 pb-1">
+                  {quickActions.map((action) => {
+                    const ActionIcon = action.icon;
+                    return (
+                      <button
+                        key={action.key}
+                        onClick={action.onClick}
+                        title={action.label}
+                        aria-label={action.label}
+                        className={quickActionClassName}
+                      >
+                        <ActionIcon className="w-4 h-4 flex-shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <ul className="space-y-0.5">
                 {OVERVIEW_NAV.map((item) => {
                   const active = isActive(item.href);
@@ -239,11 +248,11 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                       <Link
                         href={item.href}
                         title={collapsed ? item.label : undefined}
-                        className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                        className={`group/nav flex items-center rounded-lg py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                           active
                             ? "bg-neutral-800/60 text-white"
                             : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
-                        } ${collapsed ? "justify-center px-2" : ""}`}
+                        } ${collapsed ? "justify-center" : "gap-3 px-3"}`}
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
                         <span
@@ -267,7 +276,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
           <button
             onClick={() => toggleSection("workspace")}
             className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center px-2" : "justify-between px-2"
+              collapsed ? "justify-center" : "justify-between px-2"
             }`}
           >
             <span
@@ -296,11 +305,11 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                     <Link
                       href={item.href}
                       title={collapsed ? item.label : undefined}
-                      className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                      className={`group/nav flex items-center rounded-lg py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                         active
                           ? "bg-neutral-800/60 text-white"
                           : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
-                      } ${collapsed ? "justify-center px-2" : ""}`}
+                      } ${collapsed ? "justify-center" : "gap-3 px-3"}`}
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" />
                       <span
@@ -323,7 +332,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
           <button
             onClick={() => toggleSection("projects")}
             className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center px-2" : "justify-between px-2"
+              collapsed ? "justify-center" : "justify-between px-2"
             }`}
           >
             <span
@@ -349,11 +358,11 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                   <Link
                     href="/projects"
                     title={collapsed ? "All Projects" : undefined}
-                    className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                    className={`group/nav flex items-center rounded-lg py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                       projectsRootActive
                         ? "bg-neutral-800/60 text-white"
                         : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
-                    } ${collapsed ? "justify-center px-2" : "flex-1"}`}
+                    } ${collapsed ? "justify-center" : "flex-1 gap-3 px-3"}`}
                   >
                     <IconFolder className="w-5 h-5 flex-shrink-0" />
                     <span
@@ -389,24 +398,22 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                       <Link
                         href={`/projects?projectId=${project.id}`}
                         title={collapsed ? project.name : undefined}
-                        className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                        className={`group/nav flex items-center rounded-lg py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                           active
                             ? "bg-neutral-800/60 text-white"
                             : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
-                        } ${collapsed ? "justify-center px-2" : ""}`}
+                        } ${collapsed ? "justify-center" : "gap-3 px-3"}`}
                       >
-                        <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-                        <span
-                          className={`whitespace-nowrap transition-all duration-300 flex-1 ${
-                            collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                          }`}
-                        >
-                          {project.name}
-                        </span>
+                        <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${color}`} />
                         {!collapsed && (
-                          <span className="text-xs text-neutral-500 group-hover/nav:text-neutral-300">
-                            {project.stats.total}
-                          </span>
+                          <>
+                            <span className="whitespace-nowrap flex-1">
+                              {project.name}
+                            </span>
+                            <span className="text-xs text-neutral-500 group-hover/nav:text-neutral-300">
+                              {project.stats.total}
+                            </span>
+                          </>
                         )}
                       </Link>
                     </li>
@@ -421,11 +428,13 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
 
       {/* Account section */}
       {session?.user && (
-        <div className="border-t border-neutral-800/50 px-3 py-3 flex-shrink-0">
+        <div className={`border-t border-neutral-800/50 py-3 flex-shrink-0 ${
+          collapsed ? "px-2" : "px-3"
+        }`}>
           <button
             onClick={() => toggleSection("account")}
             className={`flex items-center w-full mb-2 ${
-              collapsed ? "justify-center px-2" : "justify-between px-2"
+              collapsed ? "justify-center" : "justify-between px-2"
             }`}
           >
             <span
@@ -452,11 +461,11 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                   <Link
                     href="/profile"
                     title={collapsed ? "Profile" : undefined}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+                    className={`flex items-center rounded-lg py-2 transition-all ${
                       profileActive
                         ? "bg-neutral-800/60 text-white"
                         : "text-neutral-300 hover:bg-neutral-800/40 hover:text-neutral-200"
-                    } ${collapsed ? "justify-center px-2" : "flex-1"}`}
+                    } ${collapsed ? "justify-center" : "flex-1 gap-3 px-3"}`}
                   >
                     {session.user.image ? (
                       <img
@@ -493,8 +502,8 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                 <button
                   onClick={toggleTheme}
                   title={collapsed ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : undefined}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-all active:scale-[0.97] ${
-                    collapsed ? "justify-center px-2" : ""
+                  className={`flex items-center w-full rounded-lg py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-all active:scale-[0.97] ${
+                    collapsed ? "justify-center" : "gap-3 px-3"
                   }`}
                 >
                   {theme === "dark" ? (
@@ -517,8 +526,8 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                 <button
                   onClick={onShortcutHelp}
                   title={collapsed ? "Shortcuts" : undefined}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors ${
-                    collapsed ? "justify-center px-2" : ""
+                  className={`flex items-center w-full rounded-lg py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors ${
+                    collapsed ? "justify-center" : "gap-3 px-3"
                   }`}
                 >
                   <IconHelp className="w-5 h-5 flex-shrink-0" />
@@ -536,20 +545,6 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
         </div>
       )}
 
-      {/* Collapse toggle */}
-      <div className="border-t border-neutral-800/50 p-3 flex-shrink-0">
-        <button
-          onClick={toggleCollapsed}
-          className="flex items-center justify-center w-full rounded-lg py-2 text-neutral-500 hover:bg-neutral-800/40 hover:text-neutral-300 transition-colors"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <IconChevronLeft
-            className={`w-5 h-5 transition-transform duration-300 ${
-              collapsed ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-      </div>
     </aside>
   );
 }
