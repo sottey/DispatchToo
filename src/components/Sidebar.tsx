@@ -56,6 +56,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0";
 
   const [collapsed, setCollapsed] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState<Record<string, boolean>>({
@@ -177,13 +178,18 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
           className={`flex items-center hover:opacity-80 transition-opacity ${
             collapsed ? "" : "gap-3 min-w-0"
           }`}
-          title="Go to Dashboard"
+          title={collapsed ? `Dispatch v${appVersion}` : "Go to Dashboard"}
         >
           <IconBolt className="w-6 h-6 text-blue-400 flex-shrink-0" />
           {!collapsed && (
-            <span className="text-lg font-bold text-white whitespace-nowrap">
-              Dispatch
-            </span>
+            <div className="min-w-0">
+              <span className="text-lg font-bold text-white whitespace-nowrap">
+                Dispatch
+              </span>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                v{appVersion}
+              </p>
+            </div>
           )}
         </Link>
         <button
