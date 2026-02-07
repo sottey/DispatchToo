@@ -2,7 +2,6 @@
   <img src="https://capsule-render.vercel.app/api?type=waving&height=240&color=0:0a1020,35:12244a,70:1d4ed8,100:7c3aed&text=Dispatch&fontSize=70&fontColor=ffffff&fontAlignY=40&desc=Local-first%20productivity%20command%20center&descSize=18&descAlignY=62&animation=fadeIn" alt="Dispatch banner" />
 </p>
 
-<h1 align="center">Dispatch</h1>
 <p align="center"><strong>A polished local-first workspace for tasks, projects, notes, and daily planning.</strong></p>
 
 <p align="center">
