@@ -167,21 +167,23 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
       }`}
     >
       {/* Brand */}
-      <div className={`flex items-center h-14 flex-shrink-0 border-b border-neutral-800/50 ${
-        collapsed ? "justify-center" : "justify-between px-3"
+      <div className={`flex flex-shrink-0 border-b border-neutral-800/50 ${
+        collapsed ? "flex-col items-center gap-2 py-3" : "items-center justify-between h-14 px-3"
       }`}>
-        {!collapsed && (
-          <Link
-            href="/"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0"
-            title="Go to Dashboard"
-          >
-            <IconBolt className="w-6 h-6 text-blue-400 flex-shrink-0" />
+        <Link
+          href="/"
+          className={`flex items-center hover:opacity-80 transition-opacity ${
+            collapsed ? "" : "gap-3 min-w-0"
+          }`}
+          title="Go to Dashboard"
+        >
+          <IconBolt className="w-6 h-6 text-blue-400 flex-shrink-0" />
+          {!collapsed && (
             <span className="text-lg font-bold text-white whitespace-nowrap">
               Dispatch
             </span>
-          </Link>
-        )}
+          )}
+        </Link>
         <button
           onClick={toggleCollapsed}
           className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-800/40 hover:text-neutral-300 transition-colors flex-shrink-0"
@@ -197,27 +199,21 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
       }`}>
         {/* Overview section */}
         <div>
-          <button
-            onClick={() => toggleSection("main")}
-            className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center" : "justify-between px-2"
-            }`}
-          >
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
+          {!collapsed && (
+            <button
+              onClick={() => toggleSection("main")}
+              className="flex items-center w-full mb-1 justify-between px-2"
             >
-              Overview
-            </span>
-            {!collapsed && (
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                Overview
+              </span>
               <IconChevronDown
                 className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
                   sectionsOpen.main ? "" : "-rotate-90"
                 }`}
               />
-            )}
-          </button>
+            </button>
+          )}
 
           {(sectionsOpen.main || collapsed) && (
             <div className="space-y-3">
@@ -273,27 +269,21 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
 
         {/* Workspace section */}
         <div className="pt-3 border-t border-neutral-800/50">
-          <button
-            onClick={() => toggleSection("workspace")}
-            className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center" : "justify-between px-2"
-            }`}
-          >
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
+          {!collapsed && (
+            <button
+              onClick={() => toggleSection("workspace")}
+              className="flex items-center w-full mb-1 justify-between px-2"
             >
-              Workspace
-            </span>
-            {!collapsed && (
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                Workspace
+              </span>
               <IconChevronDown
                 className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
                   sectionsOpen.workspace ? "" : "-rotate-90"
                 }`}
               />
-            )}
-          </button>
+            </button>
+          )}
 
           {(sectionsOpen.workspace || collapsed) && (
             <ul className="space-y-0.5">
@@ -329,27 +319,21 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
 
         {/* Projects section */}
         <div className="pt-3 border-t border-neutral-800/50">
-          <button
-            onClick={() => toggleSection("projects")}
-            className={`flex items-center w-full mb-1 ${
-              collapsed ? "justify-center" : "justify-between px-2"
-            }`}
-          >
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
+          {!collapsed && (
+            <button
+              onClick={() => toggleSection("projects")}
+              className="flex items-center w-full mb-1 justify-between px-2"
             >
-              Projects
-            </span>
-            {!collapsed && (
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                Projects
+              </span>
               <IconChevronDown
                 className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
                   sectionsOpen.projects ? "" : "-rotate-90"
                 }`}
               />
-            )}
-          </button>
+            </button>
+          )}
 
           {(sectionsOpen.projects || collapsed) && (
             <ul className="space-y-0.5">
@@ -431,27 +415,21 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
         <div className={`border-t border-neutral-800/50 py-3 flex-shrink-0 ${
           collapsed ? "px-2" : "px-3"
         }`}>
-          <button
-            onClick={() => toggleSection("account")}
-            className={`flex items-center w-full mb-2 ${
-              collapsed ? "justify-center" : "justify-between px-2"
-            }`}
-          >
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
+          {!collapsed && (
+            <button
+              onClick={() => toggleSection("account")}
+              className="flex items-center w-full mb-2 justify-between px-2"
             >
-              Account
-            </span>
-            {!collapsed && (
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                Account
+              </span>
               <IconChevronDown
                 className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
                   sectionsOpen.account ? "" : "-rotate-90"
                 }`}
               />
-            )}
-          </button>
+            </button>
+          )}
 
           {(sectionsOpen.account || collapsed) && (
             <ul className="space-y-0.5">

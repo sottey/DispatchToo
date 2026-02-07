@@ -103,6 +103,21 @@ export function TasksPage() {
     setPage(1);
   }, [statusFilter, priorityFilter, projectFilter]);
 
+  // Cancel delete confirmation when clicking outside
+  useEffect(() => {
+    if (!deletingId) return;
+    function handleCancel(event: MouseEvent) {
+      const target = event.target as Element | null;
+      const deleteButton = target?.closest("[data-task-delete]");
+      if (deleteButton?.getAttribute("data-task-delete") === deletingId) {
+        return;
+      }
+      setDeletingId(null);
+    }
+    document.addEventListener("mousedown", handleCancel);
+    return () => document.removeEventListener("mousedown", handleCancel);
+  }, [deletingId]);
+
   useEffect(() => {
     const nextStatus = (searchParams.get("status") as TaskStatus) || "";
     const nextPriority = (searchParams.get("priority") as TaskPriority) || "";
@@ -151,12 +166,9 @@ export function TasksPage() {
   });
 
   async function handleStatusToggle(task: Task) {
+    // Toggle only between open and in_progress
     const next: TaskStatus =
-      task.status === "open"
-        ? "in_progress"
-        : task.status === "in_progress"
-          ? "done"
-          : "open";
+      task.status === "open" ? "in_progress" : "open";
 
     setFlashingId(task.id);
     setTasks((prev) =>
@@ -176,20 +188,45 @@ export function TasksPage() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDoneToggle(task: Task) {
+    const next: TaskStatus = task.status === "done" ? "open" : "done";
+
+    setFlashingId(task.id);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)),
+    );
+    setTimeout(() => setFlashingId(null), 600);
+
+    try {
+      await api.tasks.update(task.id, { status: next });
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, status: task.status } : t,
+        ),
+      );
+      toast.error("Failed to update task status");
+    }
+  }
+
+  async function handleDeleteClick(id: string) {
     setDeletingId(id);
-    setTimeout(async () => {
-      const prev = tasks;
-      setTasks((t) => t.filter((x) => x.id !== id));
+  }
+
+  async function handleDeleteConfirm(id: string) {
+    try {
+      await api.tasks.delete(id);
+      setTasks((prev) => prev.filter((t) => t.id !== id));
       setDeletingId(null);
-      try {
-        await api.tasks.delete(id);
-        toast.success("Task deleted");
-      } catch {
-        setTasks(prev);
-        toast.error("Failed to delete task");
-      }
-    }, 300);
+      toast.success("Task deleted");
+    } catch {
+      setDeletingId(null);
+      toast.error("Failed to delete task");
+    }
+  }
+
+  function handleDeleteCancel() {
+    setDeletingId(null);
   }
 
   function handleSaved() {
@@ -424,14 +461,16 @@ export function TasksPage() {
               task={task}
               project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
               index={i}
-              isDeleting={deletingId === task.id}
               isFlashing={flashingId === task.id}
+              deletingConfirm={deletingId === task.id}
+              onDoneToggle={() => handleDoneToggle(task)}
               onStatusToggle={() => handleStatusToggle(task)}
               onEdit={() => {
                 setEditingTask(task);
                 setModalOpen(true);
               }}
-              onDelete={() => handleDelete(task.id)}
+              onDeleteClick={() => handleDeleteClick(task.id)}
+              onDeleteConfirm={() => handleDeleteConfirm(task.id)}
             />
           ))}
         </ul>
@@ -525,26 +564,32 @@ function TaskRow({
   task,
   project,
   index,
-  isDeleting,
   isFlashing,
+  deletingConfirm,
+  onDoneToggle,
   onStatusToggle,
   onEdit,
-  onDelete,
+  onDeleteClick,
+  onDeleteConfirm,
 }: {
   task: Task;
   project: Project | null;
   index: number;
-  isDeleting: boolean;
   isFlashing: boolean;
+  deletingConfirm: boolean;
+  onDoneToggle: () => void;
   onStatusToggle: () => void;
   onEdit: () => void;
-  onDelete: () => void;
+  onDeleteClick: () => void;
+  onDeleteConfirm: () => void;
 }) {
   const [ringKey, setRingKey] = useState(0);
 
   function handleStatusClick() {
-    setRingKey((k) => k + 1);
-    onStatusToggle();
+    if (task.status !== "done") {
+      setRingKey((k) => k + 1);
+      onStatusToggle();
+    }
   }
 
   return (
@@ -554,29 +599,21 @@ function TaskRow({
       } ${
         task.status === "done" ? "opacity-60" : ""
       } ${
-        isDeleting ? "animate-slide-out-right overflow-hidden" : ""
-      } ${
         isFlashing ? "animate-row-flash" : ""
       } hover:bg-neutral-50 dark:hover:bg-neutral-800/30 hover:-translate-y-px hover:shadow-sm`}
       style={{ listStyle: "none" }}
     >
+      {/* Done checkbox */}
       <button
-        onClick={handleStatusClick}
-        title={`Status: ${STATUS_STYLES[task.status].label} (click to cycle)`}
-        className="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-100 transition-all active:scale-95"
+        onClick={onDoneToggle}
+        title={task.status === "done" ? "Mark as not done" : "Mark as done"}
+        className="flex-shrink-0 w-5 h-5 rounded border-2 border-neutral-300 dark:border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500 transition-all active:scale-95 flex items-center justify-center"
       >
-        <span className="relative flex h-2.5 w-2.5">
-          <span
-            className={`absolute inset-0 rounded-full ${STATUS_STYLES[task.status].dot} transition-colors`}
-          />
-          {ringKey > 0 && (
-            <span
-              key={ringKey}
-              className={`absolute inset-0 rounded-full animate-status-ring ${STATUS_STYLES[task.status].ring}`}
-            />
-          )}
-        </span>
-        <span>{STATUS_STYLES[task.status].label}</span>
+        {task.status === "done" && (
+          <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -593,6 +630,28 @@ function TaskRow({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Status badge (only for open/in_progress) */}
+        {task.status !== "done" && (
+          <button
+            onClick={handleStatusClick}
+            title={`Status: ${STATUS_STYLES[task.status].label} (click to toggle)`}
+            className="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-100 transition-all active:scale-95"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={`absolute inset-0 rounded-full ${STATUS_STYLES[task.status].dot} transition-colors`}
+              />
+              {ringKey > 0 && (
+                <span
+                  key={ringKey}
+                  className={`absolute inset-0 rounded-full animate-status-ring ${STATUS_STYLES[task.status].ring}`}
+                />
+              )}
+            </span>
+            <span>{STATUS_STYLES[task.status].label}</span>
+          </button>
+        )}
+
         {project && (
           <span
             title={`Project: ${project.name}`}
@@ -629,11 +688,16 @@ function TaskRow({
           Edit
         </button>
         <button
-          onClick={onDelete}
-          className="rounded-md p-1.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:scale-95 transition-all"
-          title="Delete task"
+          onClick={deletingConfirm ? onDeleteConfirm : onDeleteClick}
+          data-task-delete={task.id}
+          className={`rounded-md px-2 py-1 text-xs font-medium active:scale-95 transition-all duration-200 ${
+            deletingConfirm
+              ? "text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500"
+              : "text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+          }`}
+          title={deletingConfirm ? "Click to confirm deletion" : "Delete task"}
         >
-          <IconTrash className="w-3.5 h-3.5" />
+          {deletingConfirm ? "Confirm" : <IconTrash className="w-3.5 h-3.5" />}
         </button>
       </div>
     </li>

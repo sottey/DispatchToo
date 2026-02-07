@@ -225,9 +225,9 @@ export function Dashboard({ userName }: { userName: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
         <Link
           href="/tasks"
-          className="group relative overflow-hidden rounded-xl bg-blue-600 dark:bg-blue-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-600 dark:via-blue-700 dark:to-blue-800 bg-[length:200%_200%] bg-[position:0%_0%] p-4 shadow-md transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-[position:100%_100%] hover:shadow-xl active:scale-95"
         >
-          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
           <div className="flex items-start justify-between">
             <div>
               <p className="text-3xl font-bold text-white">{openTasks.length + inProgressTasks.length}</p>
@@ -241,9 +241,9 @@ export function Dashboard({ userName }: { userName: string }) {
         </Link>
         <Link
           href="/notes"
-          className="group relative overflow-hidden rounded-xl bg-purple-600 dark:bg-purple-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 dark:from-purple-600 dark:via-purple-700 dark:to-purple-800 bg-[length:200%_200%] bg-[position:0%_0%] p-4 shadow-md transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-[position:100%_100%] hover:shadow-xl active:scale-95"
         >
-          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
           <div className="flex items-start justify-between">
             <div>
               <p className="text-3xl font-bold text-white">{notes.length}</p>
@@ -257,9 +257,9 @@ export function Dashboard({ userName }: { userName: string }) {
         </Link>
         <Link
           href="/dispatch"
-          className="group relative overflow-hidden rounded-xl bg-emerald-600 dark:bg-emerald-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 dark:from-emerald-600 dark:via-emerald-700 dark:to-emerald-800 bg-[length:200%_200%] bg-[position:0%_0%] p-4 shadow-md transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-[position:100%_100%] hover:shadow-xl active:scale-95"
         >
-          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
           <div className="flex items-start justify-between">
             <div>
               <p className="text-3xl font-bold text-white">{dispatchCount}</p>

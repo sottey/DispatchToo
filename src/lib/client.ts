@@ -64,6 +64,16 @@ export interface CompleteResult {
   nextDispatchId: string | null;
 }
 
+export interface UnfinalizeResult {
+  dispatch: Dispatch;
+  hasNextDispatch: boolean;
+  nextDispatchDate: string | null;
+}
+
+export interface CalendarData {
+  dates: Record<string, { finalized: boolean; taskCount: number }>;
+}
+
 export interface SearchResults {
   tasks: Task[];
   notes: Note[];
@@ -282,6 +292,12 @@ export const api = {
 
     complete: (id: string) =>
       request<CompleteResult>(`/dispatches/${id}/complete`, { method: "POST", body: JSON.stringify({}) }),
+
+    unfinalize: (id: string) =>
+      request<UnfinalizeResult>(`/dispatches/${id}/unfinalize`, { method: "POST", body: JSON.stringify({}) }),
+
+    calendar: (year: number, month: number) =>
+      request<CalendarData>(`/dispatches/calendar${qs({ year: year.toString(), month: month.toString() })}`),
   },
 
   search: (q: string) =>

@@ -411,7 +411,9 @@ function InboxTaskRow({
         task.status === "done" ? "opacity-60" : ""
       } ${
         isFlashing ? "animate-row-flash" : ""
-      } hover:bg-neutral-50 dark:hover:bg-neutral-800/30`}
+      } ${!snoozeMenuOpen && !deletingConfirm ? "hover:bg-neutral-50 dark:hover:bg-neutral-800/30" : ""} ${
+        snoozeMenuOpen || deletingConfirm ? "z-10" : ""
+      }`}
     >
       {/* Done checkbox */}
       <button

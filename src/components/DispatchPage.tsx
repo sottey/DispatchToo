@@ -8,10 +8,12 @@ import {
   type TaskStatus,
 } from "@/lib/client";
 import { useToast } from "@/components/ToastProvider";
+import { DispatchHistoryOverlay } from "@/components/DispatchHistoryOverlay";
 import {
   IconCalendar,
   IconCheck,
   IconCheckCircle,
+  IconClock,
   IconDocument,
   IconPlus,
   IconSearch,
@@ -42,6 +44,9 @@ export function DispatchPage() {
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [showAddTasks, setShowAddTasks] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [unfinalizing, setUnfinalizing] = useState(false);
+  const [unfinalizeWarning, setUnfinalizeWarning] = useState<{ nextDate: string } | null>(null);
 
   const fetchDispatch = useCallback(async () => {
     setLoading(true);
@@ -177,6 +182,31 @@ export function DispatchPage() {
     await handleComplete();
   }
 
+  async function handleUnfinalizeClick() {
+    if (!dispatch || unfinalizing) return;
+    setUnfinalizing(true);
+    try {
+      const result = await api.dispatches.unfinalize(dispatch.id);
+      if (result.hasNextDispatch) {
+        setUnfinalizeWarning({ nextDate: result.nextDispatchDate! });
+      } else {
+        setDispatch(result.dispatch);
+        toast.success("Dispatch reopened for editing");
+      }
+    } catch {
+      toast.error("Failed to unfinalize dispatch");
+    } finally {
+      setUnfinalizing(false);
+    }
+  }
+
+  function handleConfirmUnfinalize() {
+    if (!dispatch) return;
+    setDispatch({ ...dispatch, finalized: false });
+    setUnfinalizeWarning(null);
+    toast.success("Dispatch reopened for editing");
+  }
+
   function navigateDay(offset: number) {
     const d = new Date(date + "T00:00:00");
     d.setDate(d.getDate() + offset);
@@ -270,14 +300,27 @@ export function DispatchPage() {
               Today
             </button>
           )}
+          <button
+            onClick={() => setShowHistory(true)}
+            className="rounded-lg bg-neutral-100 dark:bg-neutral-800 px-3 py-1 text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 dark:text-neutral-200 active:scale-95 transition-all inline-flex items-center gap-1.5"
+            title="View dispatch history"
+          >
+            <IconClock className="w-3.5 h-3.5" />
+            History
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
           {dispatch?.finalized && (
-            <span className="rounded-full bg-green-100 dark:bg-green-900/40 px-3 py-1 text-sm font-medium text-green-700 dark:text-green-300 inline-flex items-center gap-1.5">
+            <button
+              onClick={handleUnfinalizeClick}
+              disabled={unfinalizing}
+              className="rounded-full bg-green-100 dark:bg-green-900/40 px-3 py-1 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60 active:scale-95 transition-all inline-flex items-center gap-1.5 disabled:opacity-50"
+              title="Click to unfinalize and edit this dispatch"
+            >
               <IconCheck className="w-3.5 h-3.5" />
-              Finalized
-            </span>
+              {unfinalizing ? "Reopening..." : "Finalized • Edit"}
+            </button>
           )}
         </div>
       </div>
@@ -556,6 +599,55 @@ export function DispatchPage() {
             {completing ? "Completing..." : confirmComplete ? "Confirm Complete" : "Complete Day"}
           </button>
         </div>
+      )}
+
+      {/* Unfinalize warning modal */}
+      {unfinalizeWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 animate-backdrop-enter" onClick={() => setUnfinalizeWarning(null)} />
+          <div className="relative w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-6 shadow-2xl mx-4 animate-modal-enter">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-3">
+              Unfinalize Dispatch?
+            </h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
+              This dispatch rolled over unfinished tasks to{" "}
+              <span className="font-medium text-neutral-900 dark:text-white">
+                {new Date(unfinalizeWarning.nextDate + "T00:00:00").toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+              . Those tasks will remain on that date if you reopen this dispatch.
+            </p>
+            <div className="flex items-center gap-3 justify-end">
+              <button
+                onClick={() => setUnfinalizeWarning(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmUnfinalize}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 active:scale-95 transition-all"
+              >
+                Reopen Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History modal */}
+      {showHistory && (
+        <DispatchHistoryOverlay
+          currentDate={date}
+          onClose={() => setShowHistory(false)}
+          onDateSelect={(newDate) => {
+            setDate(newDate);
+            setShowHistory(false);
+          }}
+        />
       )}
     </div>
   );
