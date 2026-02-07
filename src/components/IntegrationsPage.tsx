@@ -5,6 +5,8 @@ import { api, type ApiKey } from "@/lib/client";
 import { IconCode, IconCopy, IconKey, IconPlus, IconPuzzle, IconTrash } from "@/components/icons";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
+type SnippetMode = "curl" | "fetch" | "powershell";
+const ACTIVE_API_KEY_STORAGE_KEY = "dispatch.active-api-key-id";
 
 type Endpoint = {
   id: string;
@@ -53,11 +55,11 @@ const METHOD_STYLES: Record<Method, string> = {
   DELETE: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
-function buildCurl(baseUrl: string, endpoint: Endpoint) {
+function buildCurl(baseUrl: string, endpoint: Endpoint, apiKey: string) {
   const path = endpoint.path.replace("{id}", "RESOURCE_ID");
   const lines = [
     `curl -X ${endpoint.method} \\`,
-    `  -H "Authorization: Bearer YOUR_API_KEY" \\`,
+    `  -H "Authorization: Bearer ${apiKey}" \\`,
     ...(endpoint.body
       ? [`  -H "Content-Type: application/json" \\`, `  -d '${endpoint.body}' \\`]
       : []),
@@ -66,19 +68,33 @@ function buildCurl(baseUrl: string, endpoint: Endpoint) {
   return lines.join("\n");
 }
 
-function buildFetch(baseUrl: string, endpoint: Endpoint) {
+function buildFetch(baseUrl: string, endpoint: Endpoint, apiKey: string) {
   const path = endpoint.path.replace("{id}", "RESOURCE_ID");
   return [
     `const res = await fetch("${baseUrl}${path}", {`,
     `  method: "${endpoint.method}",`,
     `  headers: {`,
-    `    "Authorization": "Bearer YOUR_API_KEY",`,
+    `    "Authorization": "Bearer ${apiKey}",`,
     ...(endpoint.body ? [`    "Content-Type": "application/json",`] : []),
     `  },`,
     ...(endpoint.body ? [`  body: JSON.stringify(${endpoint.body}),`] : []),
     `});`,
     `const data = await res.json();`,
     `console.log(data);`,
+  ].join("\n");
+}
+
+function buildPowerShell(baseUrl: string, endpoint: Endpoint, apiKey: string) {
+  const path = endpoint.path.replace("{id}", "RESOURCE_ID");
+  const method = endpoint.method === "DELETE" ? "Delete" : endpoint.method === "PUT" ? "Put" : endpoint.method === "POST" ? "Post" : "Get";
+  return [
+    `$headers = @{`,
+    `  "Authorization" = "Bearer ${apiKey}"`,
+    ...(endpoint.body ? [`  "Content-Type" = "application/json"`] : []),
+    `}`,
+    ...(endpoint.body ? [`$body = '${endpoint.body}'`] : []),
+    `$response = Invoke-RestMethod -Method ${method} -Uri "${baseUrl}${path}" -Headers $headers${endpoint.body ? " -Body $body" : ""}`,
+    `$response`,
   ].join("\n");
 }
 
@@ -91,9 +107,15 @@ export function IntegrationsPage() {
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(ENDPOINTS[0].id);
-  const [snippetMode, setSnippetMode] = useState<"curl" | "fetch">("curl");
+  const [snippetMode, setSnippetMode] = useState<SnippetMode>("curl");
   const [baseUrl, setBaseUrl] = useState("http://localhost:3000");
   const [copied, setCopied] = useState<string | null>(null);
+  const [activeApiKeyId, setActiveApiKeyId] = useState<string | null>(null);
+  const [tryLoading, setTryLoading] = useState(false);
+  const [tryResponse, setTryResponse] = useState<string | null>(null);
+  const [tryError, setTryError] = useState<string | null>(null);
+  const [tryStatus, setTryStatus] = useState<number | null>(null);
+  const [isTryResponseCollapsed, setIsTryResponseCollapsed] = useState(false);
 
   useEffect(() => {
     loadApiKeys();
@@ -102,6 +124,21 @@ export function IntegrationsPage() {
   useEffect(() => {
     if (typeof window !== "undefined") setBaseUrl(window.location.origin);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(ACTIVE_API_KEY_STORAGE_KEY);
+    if (stored) setActiveApiKeyId(stored);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (activeApiKeyId) {
+      window.localStorage.setItem(ACTIVE_API_KEY_STORAGE_KEY, activeApiKeyId);
+    } else {
+      window.localStorage.removeItem(ACTIVE_API_KEY_STORAGE_KEY);
+    }
+  }, [activeApiKeyId]);
 
   const filteredEndpoints = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -117,6 +154,11 @@ export function IntegrationsPage() {
   }, [filteredEndpoints, selectedId]);
 
   const selectedEndpoint = filteredEndpoints.find((e) => e.id === selectedId) ?? filteredEndpoints[0];
+  const activeApiKey = useMemo(
+    () => apiKeys.find((key) => key.id === activeApiKeyId) ?? null,
+    [apiKeys, activeApiKeyId]
+  );
+  const snippetApiKey = activeApiKey?.key ?? "YOUR_API_KEY";
 
   const grouped = useMemo(() => {
     return (Object.keys(CATEGORY_LABELS) as Endpoint["category"][]).map((category) => ({
@@ -127,9 +169,18 @@ export function IntegrationsPage() {
 
   const snippet = selectedEndpoint
     ? snippetMode === "curl"
-      ? buildCurl(baseUrl, selectedEndpoint)
-      : buildFetch(baseUrl, selectedEndpoint)
+      ? buildCurl(baseUrl, selectedEndpoint, snippetApiKey)
+      : snippetMode === "fetch"
+        ? buildFetch(baseUrl, selectedEndpoint, snippetApiKey)
+        : buildPowerShell(baseUrl, selectedEndpoint, snippetApiKey)
     : "";
+
+  useEffect(() => {
+    setTryResponse(null);
+    setTryError(null);
+    setTryStatus(null);
+    setIsTryResponseCollapsed(false);
+  }, [selectedEndpoint?.id]);
 
   async function copyToClipboard(text: string, key?: string) {
     try {
@@ -154,6 +205,15 @@ export function IntegrationsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (apiKeys.length === 0) {
+      setActiveApiKeyId(null);
+      return;
+    }
+    if (activeApiKeyId && apiKeys.some((key) => key.id === activeApiKeyId)) return;
+    setActiveApiKeyId(apiKeys[0].id);
+  }, [apiKeys, activeApiKeyId]);
 
   async function handleCreateKey() {
     if (!newKeyName.trim()) return;
@@ -180,6 +240,62 @@ export function IntegrationsPage() {
     } catch (err) {
       console.error("Failed to delete API key:", err);
       alert("Failed to delete API key. Please try again.");
+    }
+  }
+
+  async function handleTryNow() {
+    if (!selectedEndpoint) return;
+    if (!activeApiKey) {
+      setTryError("Select an active API key to run this request.");
+      setTryResponse(null);
+      setTryStatus(null);
+      return;
+    }
+    setTryLoading(true);
+    setTryError(null);
+    setTryResponse(null);
+    setTryStatus(null);
+    setIsTryResponseCollapsed(false);
+    try {
+      const path = selectedEndpoint.path.replace("{id}", "RESOURCE_ID");
+      const url = `${baseUrl}${path}`;
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${activeApiKey.key}`,
+      };
+      let body: string | undefined;
+      if (selectedEndpoint.body) {
+        headers["Content-Type"] = "application/json";
+        try {
+          body = JSON.stringify(JSON.parse(selectedEndpoint.body));
+        } catch {
+          body = selectedEndpoint.body;
+        }
+      }
+      const res = await fetch(url, {
+        method: selectedEndpoint.method,
+        headers,
+        body,
+      });
+      setTryStatus(res.status);
+      const text = await res.text();
+      if (!text) {
+        setTryResponse("(empty response)");
+      } else {
+        try {
+          const parsed = JSON.parse(text);
+          setTryResponse(JSON.stringify(parsed, null, 2));
+        } catch {
+          setTryResponse(text);
+        }
+      }
+      if (!res.ok) {
+        setTryError(`Request failed with ${res.status} ${res.statusText}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Request failed";
+      setTryError(message);
+    } finally {
+      setTryLoading(false);
     }
   }
 
@@ -236,7 +352,14 @@ export function IntegrationsPage() {
                 className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-700"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-neutral-900 dark:text-white">{key.name}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium text-neutral-900 dark:text-white">{key.name}</div>
+                    {activeApiKeyId === key.id && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="text-sm text-neutral-600 dark:text-neutral-400 font-mono">
                       {key.key.substring(0, 20)}...
@@ -257,13 +380,26 @@ export function IntegrationsPage() {
                     {key.lastUsedAt && ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteKey(key.id)}
-                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  title="Delete API key"
-                >
-                  <IconTrash className="w-5 h-5" />
-                </button>
+                <div className="ml-4 flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveApiKeyId(key.id)}
+                    disabled={activeApiKeyId === key.id}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                      activeApiKeyId === key.id
+                        ? "bg-emerald-600 border-emerald-500 text-white cursor-default"
+                        : "bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    }`}
+                  >
+                    {activeApiKeyId === key.id ? "Active key" : "Set active"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteKey(key.id)}
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Delete API key"
+                  >
+                    <IconTrash className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -336,25 +472,14 @@ export function IntegrationsPage() {
                   )}
                 </div>
 
-                {selectedEndpoint.body && (
-                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-                    <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-                      Request Body
-                    </div>
-                    <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-sky-200">{selectedEndpoint.body}</pre>
-                  </div>
-                )}
-
-                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-                    Example Response
-                  </div>
-                  <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-emerald-200">{selectedEndpoint.response}</pre>
-                </div>
-
                 <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
                   <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Request Snippet</div>
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Request Snippet</div>
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                        {activeApiKey ? `Using active key: ${activeApiKey.name}` : "No active key selected; using YOUR_API_KEY placeholder."}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="inline-flex rounded-md border border-neutral-300 dark:border-neutral-700 overflow-hidden">
                         <button
@@ -369,17 +494,78 @@ export function IntegrationsPage() {
                         >
                           fetch
                         </button>
+                        <button
+                          onClick={() => setSnippetMode("powershell")}
+                          className={`px-3 py-1 text-xs ${snippetMode === "powershell" ? "bg-sky-600 text-white" : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300"}`}
+                        >
+                          PowerShell
+                        </button>
                       </div>
                       <button
                         onClick={() => copyToClipboard(snippet, "snippet")}
-                        className="inline-flex items-center gap-2 text-xs px-2.5 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                          copied === "snippet"
+                            ? "bg-emerald-600 border-emerald-500 text-white"
+                            : "bg-sky-600 border-sky-500 text-white hover:bg-sky-500"
+                        }`}
                       >
                         <IconCopy className="w-4 h-4" />
-                        Copy
+                        {copied === "snippet" ? "Copied" : "Copy"}
+                      </button>
+                      <button
+                        onClick={handleTryNow}
+                        disabled={tryLoading}
+                        className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                          tryLoading
+                            ? "bg-neutral-300 dark:bg-neutral-700 border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 cursor-wait"
+                            : "bg-amber-600 border-amber-500 text-white hover:bg-amber-500"
+                        }`}
+                      >
+                        {tryLoading ? "Running..." : "Try Now"}
                       </button>
                     </div>
                   </div>
                   <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-green-300">{snippet}</pre>
+                </div>
+
+                {selectedEndpoint.body && (
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                    <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                      Request Body
+                    </div>
+                    <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-sky-200">{selectedEndpoint.body}</pre>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Response</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {tryStatus ? `Status ${tryStatus}` : "Run Try Now to fetch a live response."}
+                      </div>
+                      <button
+                        onClick={() => setIsTryResponseCollapsed((prev) => !prev)}
+                        className="inline-flex items-center px-2.5 py-1 text-xs rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700/60 transition-colors"
+                      >
+                        {isTryResponseCollapsed ? "Expand" : "Collapse"}
+                      </button>
+                    </div>
+                  </div>
+                  {!isTryResponseCollapsed && (
+                    <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-emerald-200">
+                      {tryError
+                        ? `Error: ${tryError}`
+                        : tryResponse ?? "(no response yet)"}
+                    </pre>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                    Example Response
+                  </div>
+                  <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-emerald-200">{selectedEndpoint.response}</pre>
                 </div>
               </>
             ) : (
