@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment
 
-- **OS**: Windows. Always use PowerShell-compatible commands — never use Unix/macOS-only commands (`rm`, `mkdir -p`, `cat`, `chmod`, etc.). Use `New-Item`, `Remove-Item`, `cmd.exe /c` for Windows-reserved filenames, and backslash paths.
+- **OS**: Windows. Always use compatible commands — never use Unix/macOS-only commands (`rm`, `mkdir -p`, `cat`, `chmod`, etc.).
 - **Shell**: PowerShell. Use `&&` only in `cmd.exe`; in PowerShell chain with `;` or use separate commands.
 
 ## Project Overview

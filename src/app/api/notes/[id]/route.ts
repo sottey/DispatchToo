@@ -38,8 +38,16 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("title must be a non-empty string", 400);
   }
 
+  if (title && (title as string).length > 500) {
+    return errorResponse("title must be at most 500 characters", 400);
+  }
+
   if (content !== undefined && typeof content !== "string") {
     return errorResponse("content must be a string", 400);
+  }
+
+  if (content && (content as string).length > 100000) {
+    return errorResponse("content must be at most 100000 characters", 400);
   }
 
   // Check note exists and belongs to user

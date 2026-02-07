@@ -1,12 +1,12 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Dashboard } from "@/components/Dashboard";
+import { DispatchPage } from "@/components/DispatchPage";
 
-export default async function Home() {
+export default async function Dispatch() {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
-  return <Dashboard userName={session.user.name ?? "there"} />;
+  return <DispatchPage />;
 }

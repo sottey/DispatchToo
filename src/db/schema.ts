@@ -75,6 +75,46 @@ export const tasks = sqliteTable(
   ]
 );
 
+export const dispatches = sqliteTable(
+  "dispatch",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD, unique per user per day
+    summary: text("summary"),
+    finalized: integer("finalized", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("createdAt")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updatedAt")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("dispatch_userId_idx").on(table.userId),
+    index("dispatch_date_idx").on(table.userId, table.date),
+  ]
+);
+
+export const dispatchTasks = sqliteTable(
+  "dispatch_task",
+  {
+    dispatchId: text("dispatchId")
+      .notNull()
+      .references(() => dispatches.id, { onDelete: "cascade" }),
+    taskId: text("taskId")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.dispatchId, table.taskId] }),
+  ]
+);
+
 export const notes = sqliteTable(
   "note",
   {

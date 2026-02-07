@@ -63,4 +63,4 @@ Domain-specific tables (tasks, notes, etc.) will be added in subsequent phases.
 
 ## Testing
 
-- When appropriate, test with the chrome-devtools mcp so that you can see and interact with things first-hand.
+- When appropriate, test with the chrome-devtools mcp so that you can see and interact with things first-hand. Check to see if a dev server is already running before trying to start a new one.

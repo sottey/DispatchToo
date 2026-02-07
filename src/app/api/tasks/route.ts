@@ -1,7 +1,8 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const VALID_STATUSES = ["open", "in_progress", "done"] as const;
 const VALID_PRIORITIES = ["low", "medium", "high"] as const;
@@ -28,10 +29,30 @@ export const GET = withAuth(async (req, session) => {
     conditions.push(eq(tasks.priority, priority as typeof VALID_PRIORITIES[number]));
   }
 
+  const where = and(...conditions);
+  const pagination = parsePagination(url);
+
+  if (pagination) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tasks)
+      .where(where);
+
+    const results = await db
+      .select()
+      .from(tasks)
+      .where(where)
+      .orderBy(tasks.createdAt)
+      .limit(pagination.limit)
+      .offset((pagination.page - 1) * pagination.limit);
+
+    return jsonResponse(paginatedResponse(results, count, pagination));
+  }
+
   const results = await db
     .select()
     .from(tasks)
-    .where(and(...conditions))
+    .where(where)
     .orderBy(tasks.createdAt);
 
   return jsonResponse(results);
@@ -52,8 +73,16 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("title is required and must be a non-empty string", 400);
   }
 
+  if ((title as string).length > 500) {
+    return errorResponse("title must be at most 500 characters", 400);
+  }
+
   if (description !== undefined && typeof description !== "string") {
     return errorResponse("description must be a string", 400);
+  }
+
+  if (description && (description as string).length > 5000) {
+    return errorResponse("description must be at most 5000 characters", 400);
   }
 
   if (status !== undefined) {

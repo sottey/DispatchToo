@@ -70,6 +70,25 @@ export function createTestDb() {
     );
 
     CREATE INDEX "note_userId_idx" ON "note" ("userId");
+
+    CREATE TABLE "dispatch" (
+      "id" text PRIMARY KEY NOT NULL,
+      "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+      "date" text NOT NULL,
+      "summary" text,
+      "finalized" integer NOT NULL DEFAULT 0,
+      "createdAt" text NOT NULL DEFAULT (current_timestamp),
+      "updatedAt" text NOT NULL DEFAULT (current_timestamp)
+    );
+
+    CREATE INDEX "dispatch_userId_idx" ON "dispatch" ("userId");
+    CREATE INDEX "dispatch_date_idx" ON "dispatch" ("userId", "date");
+
+    CREATE TABLE "dispatch_task" (
+      "dispatchId" text NOT NULL REFERENCES "dispatch"("id") ON DELETE CASCADE,
+      "taskId" text NOT NULL REFERENCES "task"("id") ON DELETE CASCADE,
+      PRIMARY KEY ("dispatchId", "taskId")
+    );
   `);
 
   return { db, sqlite };

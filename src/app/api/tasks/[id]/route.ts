@@ -41,8 +41,16 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("title must be a non-empty string", 400);
   }
 
+  if (title && (title as string).length > 500) {
+    return errorResponse("title must be at most 500 characters", 400);
+  }
+
   if (description !== undefined && typeof description !== "string") {
     return errorResponse("description must be a string", 400);
+  }
+
+  if (description && (description as string).length > 5000) {
+    return errorResponse("description must be at most 5000 characters", 400);
   }
 
   if (status !== undefined) {

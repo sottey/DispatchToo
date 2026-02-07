@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { NavBar } from "@/components/NavBar";
+import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Dispatch",
@@ -14,11 +14,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-gray-50 min-h-screen">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{const t=localStorage.getItem('theme');if(t==='light')document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="antialiased bg-gray-50 dark:bg-gray-900 min-h-screen">
         <Providers>
-          <NavBar />
-          {children}
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

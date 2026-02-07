@@ -263,6 +263,41 @@ describe("Tasks API", () => {
       expect(res.status).toBe(400);
     });
 
+    it("returns paginated response when page param is present", async () => {
+      const res = await GET(
+        new Request("http://localhost/api/tasks?page=1&limit=2"),
+        {}
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.data).toHaveLength(2);
+      expect(data.pagination).toBeDefined();
+      expect(data.pagination.page).toBe(1);
+      expect(data.pagination.limit).toBe(2);
+      expect(data.pagination.total).toBe(3);
+      expect(data.pagination.totalPages).toBe(2);
+    });
+
+    it("returns second page of paginated results", async () => {
+      const res = await GET(
+        new Request("http://localhost/api/tasks?page=2&limit=2"),
+        {}
+      );
+      const data = await res.json();
+      expect(data.data).toHaveLength(1); // 3 total, page 2 with limit 2
+      expect(data.pagination.page).toBe(2);
+    });
+
+    it("paginates with filters", async () => {
+      const res = await GET(
+        new Request("http://localhost/api/tasks?status=open&page=1&limit=10"),
+        {}
+      );
+      const data = await res.json();
+      expect(data.data).toHaveLength(1);
+      expect(data.pagination.total).toBe(1);
+    });
+
     it("does not return tasks belonging to other users", async () => {
       // Create task as other user
       mockSession({ user: OTHER_USER });
