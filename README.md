@@ -13,6 +13,7 @@
 </p>
 
 <p align="center">
+  <a href="#prerequisites">Prerequisites</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#interactive-setup-recommended">Interactive Setup</a> •
   <a href="#feature-tour">Feature Tour</a> •
@@ -59,6 +60,18 @@ flowchart LR
     API --> ORM[Drizzle ORM]
     ORM --> DB[(SQLite on disk)]
 ```
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) `20.9+` (LTS recommended).  
+  Node includes [npm](https://www.npmjs.com/), which is required for `npm install`, `npm run dev`, and `npm run build`.
+- [Git](https://git-scm.com/downloads) (required if you use the `update` launcher command or want to pull latest changes).
+- Shell support for launcher scripts:
+  - Windows: [PowerShell](https://learn.microsoft.com/powershell/) for `dispatch.ps1` (built into modern Windows).
+  - macOS/Linux: Bash for `dispatch.sh`.
+- If native module install fails (for `better-sqlite3`), install platform build tools:
+  - Windows: [Visual Studio Build Tools (C++ workload)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  - macOS: Xcode Command Line Tools (`xcode-select --install`)
 
 ## Quick Start
 

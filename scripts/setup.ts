@@ -1,5 +1,5 @@
 import * as p from "@clack/prompts";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -75,13 +75,21 @@ async function main() {
     }
   }
 
-  // ── 1. AUTH_SECRET ───────────────────────────────────────────
-  const authSecretInput = await p.password({
-    message: "Paste your AUTH_SECRET (min 16 chars):",
-    validate: (v) => (v.length < 16 ? "Must be at least 16 characters" : undefined),
+  // ── 1. PORT ─────────────────────────────────────────────────
+  const portInput = await p.text({
+    message: "Port to run Dispatch on:",
+    initialValue: "3000",
+    placeholder: "3000",
+    validate: (v) => {
+      if (!/^\d+$/.test(v)) return "Enter a valid port number";
+      const port = Number(v);
+      if (port < 1 || port > 65535) return "Port must be between 1 and 65535";
+      return undefined;
+    },
   });
-  onCancel(authSecretInput);
-  const authSecret = authSecretInput as string;
+  onCancel(portInput);
+  const appPort = String(portInput);
+  const appUrl = `http://localhost:${appPort}`;
 
   // ── 2. GITHUB OAUTH ─────────────────────────────────────────
   const useGitHub = await p.confirm({
@@ -103,8 +111,8 @@ async function main() {
         "  3. Fill in the form:",
         "",
         `     Application name:    ${c.cyan("Dispatch")}`,
-        `     Homepage URL:        ${c.cyan("http://localhost:3000")}`,
-        `     Authorization URL:   ${c.cyan("http://localhost:3000/api/auth/callback/github")}`,
+        `     Homepage URL:        ${c.cyan(appUrl)}`,
+        `     Authorization URL:   ${c.cyan(`${appUrl}/api/auth/callback/github`)}`,
         "",
         '  4. Click "Register application"',
         `  5. Copy the ${c.bold("Client ID")} shown on the page`,
@@ -128,6 +136,9 @@ async function main() {
     onCancel(secret);
     githubSecret = secret as string;
   }
+
+  // Always generate a secure session signing secret for NextAuth.
+  const authSecret = randomBytes(32).toString("base64url");
 
   // ── 3. DATABASE ──────────────────────────────────────────────
   const dbPath = await p.text({
@@ -186,8 +197,9 @@ async function main() {
   // ── SUMMARY ─────────────────────────────────────────────────
   p.note(
     [
-      `AUTH_SECRET       ${c.dim(authSecret.slice(0, 16) + "...")}`,
+      `AUTH_SECRET       ${c.dim(authSecret.slice(0, 16) + "...")} ${c.green("(generated)")}`,
       `GitHub OAuth      ${useGitHub ? c.green("enabled") : c.yellow("disabled")}`,
+      `Port              ${appPort}`,
       `Database          ${dbPath}`,
       `Initial account   ${createAccount ? c.green(accountEmail as string) : c.yellow("skip")}`,
       `Sample data       ${seedDb ? c.green("yes") : c.yellow("no")}`,
@@ -210,9 +222,12 @@ async function main() {
 
   // Write .env.local
   s.start("Writing .env.local");
-  const envLines = ["# NextAuth", `AUTH_SECRET=${authSecret}`];
+  const envLines = ["# NextAuth", `AUTH_SECRET=${authSecret}`, `NEXTAUTH_URL=${appUrl}`];
   if (useGitHub) {
-    envLines.push(`AUTH_GITHUB_ID=${githubId}`, `AUTH_GITHUB_SECRET=${githubSecret}`);
+    envLines.push(
+      `AUTH_GITHUB_ID=${githubId}`,
+      `AUTH_GITHUB_SECRET=${githubSecret}`
+    );
   }
   envLines.push("", "# Database", `DATABASE_URL=${dbPath}`, "");
   writeFileSync(envPath, envLines.join("\n"), "utf-8");
@@ -270,9 +285,9 @@ async function main() {
   const nextSteps = [
     "Start the dev server:",
     "",
-    `  ${c.cyan("npm run dev")}`,
+    `  ${c.cyan(`npm run dev -- --port ${appPort}`)}`,
     "",
-    `Then open ${c.underline("http://localhost:3000")}`,
+    `Then open ${c.underline(appUrl)}`,
   ];
   if (createAccount) {
     nextSteps.push("", `Sign in with: ${c.bold(accountEmail)}`);
@@ -288,7 +303,7 @@ async function main() {
   if (runServerNow) {
     p.outro(c.green("Setup complete! Starting development server..."));
     p.log.info("Starting development server...");
-    execSync("npm run dev", { stdio: "inherit", cwd: process.cwd() });
+    execSync(`npm run dev -- --port ${appPort}`, { stdio: "inherit", cwd: process.cwd() });
     return;
   }
 
