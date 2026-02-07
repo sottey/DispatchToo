@@ -129,6 +129,46 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes login-shell-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes login-card-fly-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-22px) scale(1.12);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(2.8);
+    filter: blur(2px);
+  }
+}
+
+@keyframes login-page-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+    filter: blur(2px);
+  }
+}
+
 /* === Utility classes === */
 
 .animate-modal-enter {
@@ -169,6 +209,28 @@
 
 .animate-spinner {
   animation: spinner 0.6s linear infinite;
+}
+
+.login-page-exit {
+  animation: login-page-exit 0.85s ease-in forwards;
+}
+
+.login-shell-exit {
+  animation: login-shell-exit 0.85s ease-in forwards;
+}
+
+.login-card-fly-out {
+  transform-origin: 50% 42%;
+  will-change: transform, opacity, filter;
+  animation: login-card-fly-out 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page-exit,
+  .login-shell-exit,
+  .login-card-fly-out {
+    animation-duration: 0.22s;
+  }
 }
 
 /* Shimmer skeleton gradient */

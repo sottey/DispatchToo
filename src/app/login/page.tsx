@@ -24,16 +24,16 @@ export default async function LoginPage({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
+    <main id="login-page-root" className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{
         backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
         backgroundSize: "32px 32px",
       }} />
 
-      <div className="relative w-full max-w-sm animate-fade-in-up">
+      <div id="login-shell" className="relative w-full max-w-sm animate-fade-in-up">
         {/* Card */}
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-xl space-y-6 text-center">
+        <div id="login-card" className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-xl space-y-6 text-center">
           {/* Logo */}
           <div>
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 mb-4">

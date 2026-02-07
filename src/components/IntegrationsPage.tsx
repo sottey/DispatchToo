@@ -1,8 +1,86 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, type ApiKey } from "@/lib/client";
-import { IconKey, IconCopy, IconTrash, IconPlus, IconCode, IconPuzzle } from "@/components/icons";
+import { IconCode, IconCopy, IconKey, IconPlus, IconPuzzle, IconTrash } from "@/components/icons";
+
+type Method = "GET" | "POST" | "PUT" | "DELETE";
+
+type Endpoint = {
+  id: string;
+  category: "tasks" | "projects" | "notes" | "dispatches";
+  method: Method;
+  path: string;
+  summary: string;
+  params?: string[];
+  body?: string;
+  response: string;
+};
+
+const ENDPOINTS: Endpoint[] = [
+  { id: "tasks-list", category: "tasks", method: "GET", path: "/api/tasks", summary: "List tasks", params: ["status", "priority", "projectId", "page", "limit"], response: `[{ "id": "task_1", "title": "Ship docs" }]` },
+  { id: "tasks-create", category: "tasks", method: "POST", path: "/api/tasks", summary: "Create task", body: `{ "title": "New task", "priority": "high" }`, response: `{ "id": "task_1", "title": "New task" }` },
+  { id: "tasks-update", category: "tasks", method: "PUT", path: "/api/tasks/{id}", summary: "Update task", params: ["id"], body: `{ "status": "done" }`, response: `{ "id": "task_1", "status": "done" }` },
+  { id: "tasks-delete", category: "tasks", method: "DELETE", path: "/api/tasks/{id}", summary: "Delete task", params: ["id"], response: `{ "deleted": true }` },
+
+  { id: "projects-list", category: "projects", method: "GET", path: "/api/projects", summary: "List projects", params: ["status", "include", "page", "limit"], response: `[{ "id": "proj_1", "name": "Platform" }]` },
+  { id: "projects-create", category: "projects", method: "POST", path: "/api/projects", summary: "Create project", body: `{ "name": "Integrations Revamp", "color": "blue" }`, response: `{ "id": "proj_1", "name": "Integrations Revamp" }` },
+  { id: "projects-update", category: "projects", method: "PUT", path: "/api/projects/{id}", summary: "Update project", params: ["id"], body: `{ "status": "paused" }`, response: `{ "id": "proj_1", "status": "paused" }` },
+  { id: "projects-delete", category: "projects", method: "DELETE", path: "/api/projects/{id}", summary: "Delete project", params: ["id"], response: `{ "deleted": true }` },
+
+  { id: "notes-list", category: "notes", method: "GET", path: "/api/notes", summary: "List notes", params: ["search", "page", "limit"], response: `[{ "id": "note_1", "title": "Dispatch API notes" }]` },
+  { id: "notes-create", category: "notes", method: "POST", path: "/api/notes", summary: "Create note", body: `{ "title": "New note", "content": "..." }`, response: `{ "id": "note_1", "title": "New note" }` },
+  { id: "notes-update", category: "notes", method: "PUT", path: "/api/notes/{id}", summary: "Update note", params: ["id"], body: `{ "content": "Updated" }`, response: `{ "id": "note_1", "content": "Updated" }` },
+  { id: "notes-delete", category: "notes", method: "DELETE", path: "/api/notes/{id}", summary: "Delete note", params: ["id"], response: `{ "deleted": true }` },
+
+  { id: "dispatches-list", category: "dispatches", method: "GET", path: "/api/dispatches", summary: "List dispatches", params: ["date", "page", "limit"], response: `[{ "id": "disp_1", "date": "2026-02-07" }]` },
+  { id: "dispatches-create", category: "dispatches", method: "POST", path: "/api/dispatches", summary: "Create dispatch", body: `{ "date": "2026-02-07", "summary": "Plan work" }`, response: `{ "id": "disp_1", "date": "2026-02-07" }` },
+  { id: "dispatches-complete", category: "dispatches", method: "POST", path: "/api/dispatches/{id}/complete", summary: "Complete dispatch", params: ["id"], response: `{ "rolledOver": 2, "nextDispatchId": "disp_2" }` },
+  { id: "dispatches-unfinalize", category: "dispatches", method: "POST", path: "/api/dispatches/{id}/unfinalize", summary: "Unfinalize dispatch", params: ["id"], response: `{ "hasNextDispatch": true }` },
+];
+
+const CATEGORY_LABELS: Record<Endpoint["category"], string> = {
+  tasks: "Tasks",
+  projects: "Projects",
+  notes: "Notes",
+  dispatches: "Dispatches",
+};
+
+const METHOD_STYLES: Record<Method, string> = {
+  GET: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  POST: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  PUT: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  DELETE: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+};
+
+function buildCurl(baseUrl: string, endpoint: Endpoint) {
+  const path = endpoint.path.replace("{id}", "RESOURCE_ID");
+  const lines = [
+    `curl -X ${endpoint.method} \\`,
+    `  -H "Authorization: Bearer YOUR_API_KEY" \\`,
+    ...(endpoint.body
+      ? [`  -H "Content-Type: application/json" \\`, `  -d '${endpoint.body}' \\`]
+      : []),
+    `  "${baseUrl}${path}"`,
+  ];
+  return lines.join("\n");
+}
+
+function buildFetch(baseUrl: string, endpoint: Endpoint) {
+  const path = endpoint.path.replace("{id}", "RESOURCE_ID");
+  return [
+    `const res = await fetch("${baseUrl}${path}", {`,
+    `  method: "${endpoint.method}",`,
+    `  headers: {`,
+    `    "Authorization": "Bearer YOUR_API_KEY",`,
+    ...(endpoint.body ? [`    "Content-Type": "application/json",`] : []),
+    `  },`,
+    ...(endpoint.body ? [`  body: JSON.stringify(${endpoint.body}),`] : []),
+    `});`,
+    `const data = await res.json();`,
+    `console.log(data);`,
+  ].join("\n");
+}
 
 export function IntegrationsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -11,11 +89,59 @@ export function IntegrationsPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [showNewKeyModal, setShowNewKeyModal] = useState(false);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
-  const [selectedEndpoint, setSelectedEndpoint] = useState<string>("tasks");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState(ENDPOINTS[0].id);
+  const [snippetMode, setSnippetMode] = useState<"curl" | "fetch">("curl");
+  const [baseUrl, setBaseUrl] = useState("http://localhost:3000");
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     loadApiKeys();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") setBaseUrl(window.location.origin);
+  }, []);
+
+  const filteredEndpoints = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return ENDPOINTS;
+    return ENDPOINTS.filter((e) =>
+      `${e.method} ${e.path} ${e.summary} ${e.category}`.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  useEffect(() => {
+    if (filteredEndpoints.length === 0) return;
+    if (!filteredEndpoints.some((e) => e.id === selectedId)) setSelectedId(filteredEndpoints[0].id);
+  }, [filteredEndpoints, selectedId]);
+
+  const selectedEndpoint = filteredEndpoints.find((e) => e.id === selectedId) ?? filteredEndpoints[0];
+
+  const grouped = useMemo(() => {
+    return (Object.keys(CATEGORY_LABELS) as Endpoint["category"][]).map((category) => ({
+      category,
+      endpoints: filteredEndpoints.filter((e) => e.category === category),
+    }));
+  }, [filteredEndpoints]);
+
+  const snippet = selectedEndpoint
+    ? snippetMode === "curl"
+      ? buildCurl(baseUrl, selectedEndpoint)
+      : buildFetch(baseUrl, selectedEndpoint)
+    : "";
+
+  async function copyToClipboard(text: string, key?: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (key) {
+        setCopied(key);
+        window.setTimeout(() => setCopied(null), 1200);
+      }
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  }
 
   async function loadApiKeys() {
     setLoading(true);
@@ -31,11 +157,10 @@ export function IntegrationsPage() {
 
   async function handleCreateKey() {
     if (!newKeyName.trim()) return;
-
     setCreating(true);
     try {
       const newKey = await api.apiKeys.create({ name: newKeyName.trim() });
-      setApiKeys([...apiKeys, newKey]);
+      setApiKeys((prev) => [...prev, newKey]);
       setNewKeyName("");
       setShowNewKeyModal(false);
       setNewlyCreatedKey(newKey);
@@ -48,147 +173,40 @@ export function IntegrationsPage() {
   }
 
   async function handleDeleteKey(id: string) {
-    if (!confirm("Are you sure you want to delete this API key? This action cannot be undone.")) {
-      return;
-    }
-
+    if (!confirm("Delete this API key? This cannot be undone.")) return;
     try {
       await api.apiKeys.delete(id);
-      setApiKeys(apiKeys.filter((k) => k.id !== id));
+      setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete API key:", err);
       alert("Failed to delete API key. Please try again.");
     }
   }
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-    // Could add a toast notification here
-  }
-
-  const apiEndpoints = [
-    {
-      category: "Tasks",
-      id: "tasks",
-      endpoints: [
-        {
-          method: "GET",
-          path: "/api/tasks",
-          description: "List all tasks",
-          example: `curl -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/tasks`,
-        },
-        {
-          method: "POST",
-          path: "/api/tasks",
-          description: "Create a new task",
-          example: `curl -X POST \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"title":"New task","priority":"high"}' \\
-  https://localhost:3000/api/tasks`,
-        },
-        {
-          method: "PUT",
-          path: "/api/tasks/:id",
-          description: "Update a task",
-          example: `curl -X PUT \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"status":"done"}' \\
-  https://localhost:3000/api/tasks/TASK_ID`,
-        },
-        {
-          method: "DELETE",
-          path: "/api/tasks/:id",
-          description: "Delete a task",
-          example: `curl -X DELETE \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/tasks/TASK_ID`,
-        },
-      ],
-    },
-    {
-      category: "Projects",
-      id: "projects",
-      endpoints: [
-        {
-          method: "GET",
-          path: "/api/projects",
-          description: "List all projects",
-          example: `curl -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/projects`,
-        },
-        {
-          method: "POST",
-          path: "/api/projects",
-          description: "Create a new project",
-          example: `curl -X POST \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"New project","color":"blue"}' \\
-  https://localhost:3000/api/projects`,
-        },
-      ],
-    },
-    {
-      category: "Notes",
-      id: "notes",
-      endpoints: [
-        {
-          method: "GET",
-          path: "/api/notes",
-          description: "List all notes",
-          example: `curl -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/notes`,
-        },
-        {
-          method: "POST",
-          path: "/api/notes",
-          description: "Create a new note",
-          example: `curl -X POST \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"title":"New note","content":"Content here"}' \\
-  https://localhost:3000/api/notes`,
-        },
-      ],
-    },
-    {
-      category: "Dispatches",
-      id: "dispatches",
-      endpoints: [
-        {
-          method: "GET",
-          path: "/api/dispatches",
-          description: "List all dispatches",
-          example: `curl -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/dispatches`,
-        },
-        {
-          method: "POST",
-          path: "/api/dispatches/:id/complete",
-          description: "Complete a dispatch",
-          example: `curl -X POST \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  https://localhost:3000/api/dispatches/DISPATCH_ID/complete`,
-        },
-      ],
-    },
-  ];
-
-  const selectedCategory = apiEndpoints.find((cat) => cat.id === selectedEndpoint);
-
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
-      <header>
+      <header className="space-y-3">
         <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Integrations</h1>
-        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage API keys and explore available endpoints
-        </p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">Manage API keys and consume Dispatch endpoints with copy-ready snippets.</p>
+        <div className="rounded-xl border border-sky-200 dark:border-sky-900/60 bg-gradient-to-r from-sky-50 via-cyan-50 to-white dark:from-sky-950/40 dark:via-cyan-950/20 dark:to-neutral-900 p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="font-semibold text-neutral-900 dark:text-white">Base URL</div>
+            <button onClick={() => copyToClipboard(baseUrl, "base-url")} className="mt-1 inline-flex items-center gap-2 text-sky-700 dark:text-sky-300 hover:underline">
+              <code>{baseUrl}</code>
+              <IconCopy className="w-4 h-4" />
+            </button>
+          </div>
+          <div>
+            <div className="font-semibold text-neutral-900 dark:text-white">Auth</div>
+            <code className="block mt-1 text-neutral-700 dark:text-neutral-300">Authorization: Bearer YOUR_API_KEY</code>
+          </div>
+          <div>
+            <div className="font-semibold text-neutral-900 dark:text-white">Alternative</div>
+            <code className="block mt-1 text-neutral-700 dark:text-neutral-300">x-api-key: YOUR_API_KEY</code>
+          </div>
+        </div>
       </header>
 
-      {/* API Keys Section */}
       <section className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -224,12 +242,15 @@ export function IntegrationsPage() {
                       {key.key.substring(0, 20)}...
                     </code>
                     <button
-                      onClick={() => copyToClipboard(key.key)}
+                      onClick={() => copyToClipboard(key.key, `key-${key.id}`)}
                       title="Copy to clipboard"
                       className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
                     >
                       <IconCopy className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                     </button>
+                    {copied === `key-${key.id}` && (
+                      <span className="text-xs text-emerald-600 dark:text-emerald-300">Copied</span>
+                    )}
                   </div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
                     Created {new Date(key.createdAt).toLocaleDateString()}
@@ -249,107 +270,150 @@ export function IntegrationsPage() {
         )}
       </section>
 
-      {/* API Documentation Section */}
       <section className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <IconCode className="w-6 h-6 text-purple-500" />
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">API Documentation</h2>
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <IconCode className="w-6 h-6 text-sky-500" />
+            <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">API Documentation</h2>
+          </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter endpoints..."
+            className="w-full md:w-72 px-3 py-2 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <div className="col-span-3 space-y-1">
-            {apiEndpoints.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedEndpoint(category.id)}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  selectedEndpoint === category.id
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {category.category}
-              </button>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 space-y-4">
+            {grouped.map((group) =>
+              group.endpoints.length === 0 ? null : (
+                <div key={group.category} className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/70 text-sm font-semibold text-neutral-900 dark:text-white">
+                    {CATEGORY_LABELS[group.category]}
+                  </div>
+                  <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                    {group.endpoints.map((endpoint) => (
+                      <button
+                        key={endpoint.id}
+                        onClick={() => setSelectedId(endpoint.id)}
+                        className={`w-full text-left px-4 py-3 transition-colors ${
+                          selectedId === endpoint.id
+                            ? "bg-sky-50 dark:bg-sky-900/20"
+                            : "hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 text-[11px] font-semibold rounded ${METHOD_STYLES[endpoint.method]}`}>
+                            {endpoint.method}
+                          </span>
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{endpoint.path}</span>
+                        </div>
+                        <div className="text-sm font-medium text-neutral-900 dark:text-white">{endpoint.summary}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
           </div>
 
-          {/* Content */}
-          <div className="col-span-9 space-y-4">
-            {selectedCategory?.endpoints.map((endpoint, idx) => (
-              <div
-                key={idx}
-                className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden"
-              >
-                <div className="bg-neutral-50 dark:bg-neutral-800/50 px-4 py-3 border-b border-neutral-200 dark:border-neutral-700">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded ${
-                        endpoint.method === "GET"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                          : endpoint.method === "POST"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                            : endpoint.method === "PUT"
-                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                      }`}
-                    >
-                      {endpoint.method}
+          <div className="lg:col-span-8 space-y-4">
+            {selectedEndpoint ? (
+              <>
+                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded ${METHOD_STYLES[selectedEndpoint.method]}`}>
+                      {selectedEndpoint.method}
                     </span>
-                    <code className="text-sm font-mono text-neutral-900 dark:text-white">
-                      {endpoint.path}
-                    </code>
+                    <code className="text-sm font-mono text-neutral-900 dark:text-white">{selectedEndpoint.path}</code>
                   </div>
-                  <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                    {endpoint.description}
-                  </p>
+                  <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">{selectedEndpoint.summary}</h3>
+                  {selectedEndpoint.params && (
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+                      Params: {selectedEndpoint.params.join(", ")}
+                    </p>
+                  )}
                 </div>
-                <div className="bg-neutral-900 p-4">
-                  <pre className="text-sm text-green-400 font-mono overflow-x-auto">
-                    {endpoint.example}
-                  </pre>
+
+                {selectedEndpoint.body && (
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                    <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                      Request Body
+                    </div>
+                    <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-sky-200">{selectedEndpoint.body}</pre>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                    Example Response
+                  </div>
+                  <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-emerald-200">{selectedEndpoint.response}</pre>
                 </div>
-              </div>
-            ))}
+
+                <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                  <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Request Snippet</div>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex rounded-md border border-neutral-300 dark:border-neutral-700 overflow-hidden">
+                        <button
+                          onClick={() => setSnippetMode("curl")}
+                          className={`px-3 py-1 text-xs ${snippetMode === "curl" ? "bg-sky-600 text-white" : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300"}`}
+                        >
+                          cURL
+                        </button>
+                        <button
+                          onClick={() => setSnippetMode("fetch")}
+                          className={`px-3 py-1 text-xs ${snippetMode === "fetch" ? "bg-sky-600 text-white" : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300"}`}
+                        >
+                          fetch
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(snippet, "snippet")}
+                        className="inline-flex items-center gap-2 text-xs px-2.5 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      >
+                        <IconCopy className="w-4 h-4" />
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="p-4 text-sm font-mono overflow-x-auto bg-neutral-950 text-green-300">{snippet}</pre>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">No endpoint selected.</div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Connectors Section */}
       <section className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6">
         <div className="flex items-center gap-3 mb-6">
           <IconPuzzle className="w-6 h-6 text-amber-500" />
           <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">Connectors</h2>
         </div>
-
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-24 h-24 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
             <IconPuzzle className="w-12 h-12 text-neutral-400 dark:text-neutral-600" />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-            Coming Soon
-          </h3>
+          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Coming Soon</h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-md">
-            Connect Dispatch to your favorite tools and services. Integrations with Slack, GitHub,
-            Linear, and more are on the way.
+            Slack, GitHub, and Linear connectors are on the roadmap. Today, you can integrate directly using the API keys and snippets above.
           </p>
         </div>
       </section>
 
-      {/* Create API Key Modal */}
       {showNewKeyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNewKeyModal(false)}>
           <div
             className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-md border border-neutral-200 dark:border-neutral-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-              Create API Key
-            </h3>
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">Create API Key</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Key Name
-              </label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Key Name</label>
               <input
                 type="text"
                 value={newKeyName}
@@ -378,27 +442,22 @@ export function IntegrationsPage() {
         </div>
       )}
 
-      {/* Newly Created Key Alert */}
       {newlyCreatedKey && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setNewlyCreatedKey(null)}>
           <div
             className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-md border border-neutral-200 dark:border-neutral-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-              API Key Created
-            </h3>
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">API Key Created</h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-              Make sure to copy your API key now. You won't be able to see it again!
+              Make sure to copy your API key now. You won't be able to see it again.
             </p>
             <div className="bg-neutral-50 dark:bg-neutral-800 p-3 rounded-lg mb-4">
-              <code className="text-sm text-neutral-900 dark:text-white font-mono break-all">
-                {newlyCreatedKey.key}
-              </code>
+              <code className="text-sm text-neutral-900 dark:text-white font-mono break-all">{newlyCreatedKey.key}</code>
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => copyToClipboard(newlyCreatedKey.key)}
+                onClick={() => copyToClipboard(newlyCreatedKey.key, "new-key")}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 <IconCopy className="w-4 h-4" />
@@ -411,6 +470,7 @@ export function IntegrationsPage() {
                 Done
               </button>
             </div>
+            {copied === "new-key" && <div className="mt-3 text-xs text-emerald-600 dark:text-emerald-300">Copied.</div>}
           </div>
         </div>
       )}

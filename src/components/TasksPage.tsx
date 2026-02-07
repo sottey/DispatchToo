@@ -267,6 +267,7 @@ export function TasksPage() {
       { value: "none", label: "Unassigned", dot: "bg-neutral-300" },
     ];
     const mapped = [...projects]
+      .filter((project) => project.status !== "completed")
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((project) => ({
         value: project.id,
@@ -279,6 +280,14 @@ export function TasksPage() {
   const projectMap = useMemo(() => {
     return new Map(projects.map((project) => [project.id, project]));
   }, [projects]);
+
+  useEffect(() => {
+    if (!projectFilter || projectFilter === "none") return;
+    const selectedProject = projects.find((project) => project.id === projectFilter);
+    if (selectedProject?.status === "completed") {
+      setProjectFilter("");
+    }
+  }, [projectFilter, projects]);
 
   const sortOptions = [
     { value: "createdAt", label: "Newest" },

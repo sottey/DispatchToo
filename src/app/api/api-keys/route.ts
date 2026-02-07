@@ -18,7 +18,7 @@ export const GET = withAuth(async (req, session) => {
     .orderBy(apiKeys.createdAt);
 
   return jsonResponse(results);
-});
+}, { allowApiKey: false });
 
 /** POST /api/api-keys — create a new API key */
 export const POST = withAuth(async (req, session) => {
@@ -56,4 +56,4 @@ export const POST = withAuth(async (req, session) => {
     .returning();
 
   return jsonResponse(apiKey, 201);
-});
+}, { allowApiKey: false });

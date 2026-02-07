@@ -3,9 +3,11 @@ import { db } from "@/db";
 import { apiKeys } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
+type RouteContext = { params: Promise<{ id: string }> };
+
 /** DELETE /api/api-keys/[id] — delete an API key */
-export const DELETE = withAuth(async (req, session, { params }) => {
-  const { id } = await params;
+export const DELETE = withAuth(async (req, session, ctx: RouteContext) => {
+  const { id } = await ctx.params;
 
   if (!id || typeof id !== "string") {
     return errorResponse("id is required", 400);
@@ -24,4 +26,4 @@ export const DELETE = withAuth(async (req, session, { params }) => {
   await db.delete(apiKeys).where(eq(apiKeys.id, id));
 
   return jsonResponse({ success: true });
-});
+}, { allowApiKey: false });
