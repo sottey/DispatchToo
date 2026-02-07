@@ -179,11 +179,25 @@ export function ProjectsPage() {
 
   async function handleTaskStatusToggle(task: Task) {
     const nextStatus: TaskStatus =
-      task.status === "open"
-        ? "in_progress"
-        : task.status === "in_progress"
-          ? "done"
-          : "open";
+      task.status === "open" ? "in_progress" : "open";
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
+    );
+
+    try {
+      await api.tasks.update(task.id, { status: nextStatus });
+      await refreshProjects();
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)),
+      );
+      toast.error("Failed to update task status");
+    }
+  }
+
+  async function handleTaskDoneToggle(task: Task) {
+    const nextStatus: TaskStatus = task.status === "done" ? "open" : "done";
 
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
@@ -310,7 +324,7 @@ export function ProjectsPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <StatPill label="Open" value={selectedProject.stats.open} color="blue" />
-                    <StatPill label="In Progress" value={selectedProject.stats.inProgress} color="yellow" />
+                    <StatPill label="In-Progress" value={selectedProject.stats.inProgress} color="yellow" />
                     <StatPill label="Done" value={selectedProject.stats.done} color="green" />
                   </div>
 
@@ -391,7 +405,12 @@ export function ProjectsPage() {
                             i > 0 ? "border-t border-neutral-100 dark:border-neutral-800/60" : ""
                             }`}
                           >
-                            <span className={`h-2 w-2 rounded-full ${PROJECT_COLORS[selectedProject.color]?.dot ?? "bg-blue-500"}`} />
+                            <input
+                              type="checkbox"
+                              checked={task.status === "done"}
+                              onChange={() => handleTaskDoneToggle(task)}
+                              className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                            />
                             <span
                               className={`flex-1 truncate dark:text-white ${
                                 task.status === "done" ? "line-through text-neutral-400 dark:text-neutral-500" : ""
@@ -399,14 +418,16 @@ export function ProjectsPage() {
                             >
                               {task.title}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleTaskStatusToggle(task)}
-                              title="Click to cycle status"
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95 ${STATUS_BADGES[task.status]}`}
-                            >
-                              {task.status.replace("_", " ")}
-                            </button>
+                            {task.status !== "done" && (
+                              <button
+                                type="button"
+                                onClick={() => handleTaskStatusToggle(task)}
+                                title="Click to toggle status"
+                                className={`text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95 ${STATUS_BADGES[task.status]}`}
+                              >
+                                {task.status === "in_progress" ? "in-progress" : task.status}
+                              </button>
+                            )}
                             {task.dueDate && (
                               <span className="text-xs text-neutral-400 dark:text-neutral-500">
                                 {task.dueDate}
