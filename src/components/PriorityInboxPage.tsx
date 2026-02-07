@@ -9,7 +9,7 @@ import {
   type Project,
 } from "@/lib/client";
 import { useToast } from "@/components/ToastProvider";
-import { IconInbox } from "@/components/icons";
+import { IconInbox, IconClock, IconTrash } from "@/components/icons";
 import { PROJECT_COLORS } from "@/lib/projects";
 
 const STATUS_STYLES: Record<TaskStatus, { dot: string; label: string; ring: string }> = {
@@ -49,6 +49,8 @@ export function PriorityInboxPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [flashingId, setFlashingId] = useState<string | null>(null);
+  const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const today = todayStr();
 
@@ -97,12 +99,9 @@ export function PriorityInboxPage() {
   const totalCount = overdueTasks.length + dueTodayTasks.length + highPriorityNoDueTasks.length;
 
   async function handleStatusToggle(task: Task) {
+    // Toggle only between open and in_progress
     const next: TaskStatus =
-      task.status === "open"
-        ? "in_progress"
-        : task.status === "in_progress"
-          ? "done"
-          : "open";
+      task.status === "open" ? "in_progress" : "open";
 
     setFlashingId(task.id);
     setTasks((prev) =>
@@ -120,6 +119,74 @@ export function PriorityInboxPage() {
       );
       toast.error("Failed to update task status");
     }
+  }
+
+  async function handleDoneToggle(task: Task) {
+    const next: TaskStatus = task.status === "done" ? "open" : "done";
+
+    setFlashingId(task.id);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)),
+    );
+    setTimeout(() => setFlashingId(null), 600);
+
+    try {
+      await api.tasks.update(task.id, { status: next });
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, status: task.status } : t,
+        ),
+      );
+      toast.error("Failed to update task status");
+    }
+  }
+
+  async function handleSnooze(task: Task, days: number | null) {
+    setSnoozeMenuId(null);
+
+    let newDueDate: string | null = null;
+    if (days !== null) {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      newDueDate = date.toISOString().split("T")[0];
+    }
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, dueDate: newDueDate } : t)),
+    );
+
+    try {
+      await api.tasks.update(task.id, { dueDate: newDueDate });
+      toast.success(
+        days === null
+          ? "Task snoozed indefinitely"
+          : `Snoozed until ${newDueDate}`
+      );
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, dueDate: task.dueDate } : t,
+        ),
+      );
+      toast.error("Failed to snooze task");
+    }
+  }
+
+  async function handleDelete(taskId: string) {
+    try {
+      await api.tasks.delete(taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      setDeletingId(null);
+      toast.success("Task deleted");
+    } catch {
+      setDeletingId(null);
+      toast.error("Failed to delete task");
+    }
+  }
+
+  function handleCancelDelete() {
+    setDeletingId(null);
   }
 
   if (loading) {
@@ -158,7 +225,7 @@ export function PriorityInboxPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
           {/* Overdue */}
           {overdueTasks.length > 0 && (
             <Section
@@ -173,7 +240,16 @@ export function PriorityInboxPage() {
                   project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
                   index={i}
                   isFlashing={flashingId === task.id}
+                  snoozeMenuOpen={snoozeMenuId === task.id}
+                  deletingConfirm={deletingId === task.id}
+                  onDoneToggle={() => handleDoneToggle(task)}
                   onStatusToggle={() => handleStatusToggle(task)}
+                  onSnoozeClick={() => setSnoozeMenuId(task.id)}
+                  onSnoozeSelect={(days) => handleSnooze(task, days)}
+                  onSnoozeClose={() => setSnoozeMenuId(null)}
+                  onDeleteClick={() => setDeletingId(task.id)}
+                  onDeleteConfirm={() => handleDelete(task.id)}
+                  onDeleteCancel={handleCancelDelete}
                 />
               ))}
             </Section>
@@ -193,7 +269,16 @@ export function PriorityInboxPage() {
                   project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
                   index={i}
                   isFlashing={flashingId === task.id}
+                  snoozeMenuOpen={snoozeMenuId === task.id}
+                  deletingConfirm={deletingId === task.id}
+                  onDoneToggle={() => handleDoneToggle(task)}
                   onStatusToggle={() => handleStatusToggle(task)}
+                  onSnoozeClick={() => setSnoozeMenuId(task.id)}
+                  onSnoozeSelect={(days) => handleSnooze(task, days)}
+                  onSnoozeClose={() => setSnoozeMenuId(null)}
+                  onDeleteClick={() => setDeletingId(task.id)}
+                  onDeleteConfirm={() => handleDelete(task.id)}
+                  onDeleteCancel={handleCancelDelete}
                 />
               ))}
             </Section>
@@ -213,7 +298,16 @@ export function PriorityInboxPage() {
                   project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
                   index={i}
                   isFlashing={flashingId === task.id}
+                  snoozeMenuOpen={snoozeMenuId === task.id}
+                  deletingConfirm={deletingId === task.id}
+                  onDoneToggle={() => handleDoneToggle(task)}
                   onStatusToggle={() => handleStatusToggle(task)}
+                  onSnoozeClick={() => setSnoozeMenuId(task.id)}
+                  onSnoozeSelect={(days) => handleSnooze(task, days)}
+                  onSnoozeClose={() => setSnoozeMenuId(null)}
+                  onDeleteClick={() => setDeletingId(task.id)}
+                  onDeleteConfirm={() => handleDelete(task.id)}
+                  onDeleteCancel={handleCancelDelete}
                 />
               ))}
             </Section>
@@ -250,24 +344,68 @@ function InboxTaskRow({
   project,
   index,
   isFlashing,
+  snoozeMenuOpen,
+  deletingConfirm,
+  onDoneToggle,
   onStatusToggle,
+  onSnoozeClick,
+  onSnoozeSelect,
+  onSnoozeClose,
+  onDeleteClick,
+  onDeleteConfirm,
+  onDeleteCancel,
 }: {
   task: Task;
   project: Project | null;
   index: number;
   isFlashing: boolean;
+  snoozeMenuOpen: boolean;
+  deletingConfirm: boolean;
+  onDoneToggle: () => void;
   onStatusToggle: () => void;
+  onSnoozeClick: () => void;
+  onSnoozeSelect: (days: number | null) => void;
+  onSnoozeClose: () => void;
+  onDeleteClick: () => void;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
 }) {
   const [ringKey, setRingKey] = useState(0);
 
   function handleStatusClick() {
-    setRingKey((k) => k + 1);
-    onStatusToggle();
+    if (task.status !== "done") {
+      setRingKey((k) => k + 1);
+      onStatusToggle();
+    }
   }
+
+  // Close snooze menu when clicking outside
+  useEffect(() => {
+    if (!snoozeMenuOpen) return;
+
+    function handleClickOutside() {
+      onSnoozeClose();
+    }
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [snoozeMenuOpen, onSnoozeClose]);
+
+  // Close delete confirmation when clicking outside
+  useEffect(() => {
+    if (!deletingConfirm) return;
+
+    function handleClickOutside() {
+      onDeleteCancel();
+    }
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [deletingConfirm, onDeleteCancel]);
 
   return (
     <div
-      className={`group flex items-center gap-3 p-4 transition-all duration-200 ${
+      className={`group relative flex items-center gap-3 p-4 transition-all duration-200 ${
         index > 0 ? "border-t border-neutral-100 dark:border-neutral-800/50" : ""
       } ${
         task.status === "done" ? "opacity-60" : ""
@@ -275,23 +413,17 @@ function InboxTaskRow({
         isFlashing ? "animate-row-flash" : ""
       } hover:bg-neutral-50 dark:hover:bg-neutral-800/30`}
     >
+      {/* Done checkbox */}
       <button
-        onClick={handleStatusClick}
-        title={`Status: ${STATUS_STYLES[task.status].label} (click to cycle)`}
-        className="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-100 transition-all active:scale-95"
+        onClick={onDoneToggle}
+        title={task.status === "done" ? "Mark as not done" : "Mark as done"}
+        className="flex-shrink-0 w-5 h-5 rounded border-2 border-neutral-300 dark:border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500 transition-all active:scale-95 flex items-center justify-center"
       >
-        <span className="relative flex h-2.5 w-2.5">
-          <span
-            className={`absolute inset-0 rounded-full ${STATUS_STYLES[task.status].dot} transition-colors`}
-          />
-          {ringKey > 0 && (
-            <span
-              key={ringKey}
-              className={`absolute inset-0 rounded-full animate-status-ring ${STATUS_STYLES[task.status].ring}`}
-            />
-          )}
-        </span>
-        <span>{STATUS_STYLES[task.status].label}</span>
+        {task.status === "done" && (
+          <svg className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -308,6 +440,28 @@ function InboxTaskRow({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Status badge (only for open/in_progress) */}
+        {task.status !== "done" && (
+          <button
+            onClick={handleStatusClick}
+            title={`Status: ${STATUS_STYLES[task.status].label} (click to toggle)`}
+            className="flex-shrink-0 inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-100 transition-all active:scale-95"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={`absolute inset-0 rounded-full ${STATUS_STYLES[task.status].dot} transition-colors`}
+              />
+              {ringKey > 0 && (
+                <span
+                  key={ringKey}
+                  className={`absolute inset-0 rounded-full animate-status-ring ${STATUS_STYLES[task.status].ring}`}
+                />
+              )}
+            </span>
+            <span>{STATUS_STYLES[task.status].label}</span>
+          </button>
+        )}
+
         {project && (
           <span
             title={`Project: ${project.name}`}
@@ -329,6 +483,76 @@ function InboxTaskRow({
           <span className="text-xs text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
             {task.dueDate}
           </span>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+        {/* Snooze button */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSnoozeClick();
+            }}
+            className="rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all inline-flex items-center gap-1.5"
+            title="Snooze task"
+          >
+            <IconClock className="w-3.5 h-3.5" />
+            Snooze
+          </button>
+
+          {/* Snooze menu */}
+          {snoozeMenuOpen && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-xl z-50 overflow-hidden animate-fade-in"
+            >
+              <button
+                onClick={() => onSnoozeSelect(1)}
+                className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              >
+                1 day
+              </button>
+              <button
+                onClick={() => onSnoozeSelect(7)}
+                className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-t border-neutral-100 dark:border-neutral-800"
+              >
+                1 week
+              </button>
+              <button
+                onClick={() => onSnoozeSelect(null)}
+                className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-t border-neutral-100 dark:border-neutral-800"
+              >
+                Indefinitely
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Delete button */}
+        {!deletingConfirm ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick();
+            }}
+            className="rounded-md p-1.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:scale-95 transition-all"
+            title="Delete task"
+          >
+            <IconTrash className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteConfirm();
+            }}
+            className="rounded-md px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 active:scale-95 transition-all animate-fade-in"
+            title="Click to confirm deletion"
+          >
+            Confirm
+          </button>
         )}
       </div>
     </div>
