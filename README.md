@@ -161,7 +161,7 @@ On startup, the container automatically runs `npm run db:push` before launching 
 
 This repo includes two compose files:
 
-- `docker-compose.yml` - runs the published image from GHCR (`ghcr.io/nkasco/dispatchtodoapp:latest`)
+- `docker-compose.yml` - runs the published image from GHCR (`ghcr.io/nkasco/dispatchtodoapp:latest` by default, overrideable)
 - `docker-compose.dev.yml` - builds an image from your local source (for development/testing)
 
 1. Start the published image:
@@ -199,6 +199,8 @@ Optional overrides:
 - `NEXTAUTH_URL` (defaults to `http://localhost:3000`)
 - `AUTH_TRUST_HOST` (defaults to `true` for Docker)
 - `DISPATCH_PORT` (defaults to `3000`)
+- `DISPATCH_IMAGE` (published image override for `docker-compose.yml`)
+- `DISPATCH_DEV_IMAGE` (local dev image tag override for `docker-compose.dev.yml`)
 
 For overrides, create a local `.env` file next to `docker-compose.yml`:
 
@@ -207,6 +209,8 @@ AUTH_SECRET=replace-with-a-long-random-secret
 NEXTAUTH_URL=http://localhost:3000
 AUTH_TRUST_HOST=true
 DISPATCH_PORT=3000
+DISPATCH_IMAGE=ghcr.io/nkasco/dispatchtodoapp:latest
+DISPATCH_DEV_IMAGE=dispatch:latest
 ```
 
 Important: avoid setting `DATABASE_URL=./dispatch.db` for containers. Compose already pins it to `/app/data/dispatch.db` so SQLite persists in the Docker volume.
@@ -290,7 +294,8 @@ Developer launchers (Node.js + npm required):
 
 - `.\dispatch-dev.ps1 <command>` (Windows PowerShell)
 - `./dispatch-dev.sh <command>` (Bash)
-- Commands: `setup`, `dev`, `start`, `build`, `update`, `seed`, `studio`, `test`, `lint`, `resetdb`, `version`, `help`
+- Commands: `setup`, `dev`, `start`, `build`, `update`, `seed`, `studio`, `test`, `lint`, `publish`, `resetdb`, `version`, `help`
+- Full reset setup: `setup full` (removes Dispatch dev containers/volumes/local images, then runs setup)
 
 Example:
 
@@ -298,6 +303,8 @@ Example:
 .\dispatch.ps1 help
 .\dispatch.ps1 setup
 .\dispatch.ps1 start
+.\dispatch-dev.ps1 setup full
+.\dispatch-dev.ps1 publish
 .\dispatch-dev.ps1 resetdb
 .\dispatch-dev.ps1 dev
 ```
@@ -306,6 +313,8 @@ Example:
 ./dispatch.sh help
 ./dispatch.sh setup
 ./dispatch.sh start
+./dispatch-dev.sh setup full
+./dispatch-dev.sh publish
 ./dispatch-dev.sh resetdb
 ./dispatch-dev.sh dev
 ```

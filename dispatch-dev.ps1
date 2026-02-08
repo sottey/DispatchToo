@@ -6,18 +6,22 @@
     Provides commands to set up, start, update, and manage your Dispatch instance.
 
 .PARAMETER Command
-    The command to run: setup, dev, start, build, update, seed, studio, test, resetdb, help
+    The command to run: setup, dev, start, build, update, seed, studio, test, publish, resetdb, help
 
 .EXAMPLE
     .\dispatch-dev.ps1 setup
+    .\dispatch-dev.ps1 setup full
     .\dispatch-dev.ps1 dev
     .\dispatch-dev.ps1 update
 #>
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("setup", "dev", "start", "build", "update", "seed", "studio", "test", "lint", "resetdb", "help", "version", "")]
-    [string]$Command = ""
+    [ValidateSet("setup", "dev", "start", "build", "update", "seed", "studio", "test", "lint", "publish", "resetdb", "help", "version", "")]
+    [string]$Command = "",
+    [Parameter(Position = 1)]
+    [ValidateSet("", "full")]
+    [string]$SetupMode = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,6 +76,7 @@ function Show-Help {
         @{ Cmd = "studio";  Desc = "Open Drizzle Studio (database GUI)" }
         @{ Cmd = "test";    Desc = "Run the test suite" }
         @{ Cmd = "lint";    Desc = "Run ESLint" }
+        @{ Cmd = "publish"; Desc = "Build dev image, tag, and push container image" }
         @{ Cmd = "resetdb"; Desc = "Remove dev Docker volumes (fresh SQLite state)" }
         @{ Cmd = "version"; Desc = "Show version number" }
         @{ Cmd = "help";    Desc = "Show this help message" }
@@ -82,6 +87,8 @@ function Show-Help {
         Write-Host ("{0,-10}" -f $c.Cmd) -ForegroundColor Cyan -NoNewline
         Write-Host $c.Desc -ForegroundColor DarkGray
     }
+    Write-Host ""
+    Write-DimLn "  Tip: '.\dispatch-dev.ps1 setup full' performs full dev Docker cleanup first."
     Write-Host ""
 }
 
@@ -101,8 +108,78 @@ function Assert-NodeModules {
 }
 
 # ── Commands ──────────────────────────────────────────────────
+function Invoke-FullDevCleanup {
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-RedLn "  Docker is not installed or not on PATH."
+        exit 1
+    }
+
+    Write-YellowLn "  Running full dev Docker cleanup..."
+    Write-Host ""
+    Set-Location $PSScriptRoot
+
+    # Always tear down this compose stack first.
+    if (Test-Path "$PSScriptRoot\.env.local") {
+        docker compose -f docker-compose.dev.yml --env-file .env.local down -v --remove-orphans
+    } else {
+        docker compose -f docker-compose.dev.yml down -v --remove-orphans
+    }
+
+    # Remove additional Dispatch-related containers that are not registry-backed.
+    $containers = docker ps -a --format "{{.ID}}|{{.Image}}|{{.Names}}" | Where-Object { $_ -and $_.Trim().Length -gt 0 }
+    $containerIds = @()
+    foreach ($line in $containers) {
+        $parts = $line -split "\|", 3
+        if ($parts.Length -lt 3) { continue }
+        $id = $parts[0]
+        $image = $parts[1]
+        $name = $parts[2]
+        $isDispatchRelated = ($name -match "dispatch") -or ($image -match "dispatch")
+        $isRegistryImage = $image -match "/"
+        if ($isDispatchRelated -and -not $isRegistryImage) {
+            $containerIds += $id
+        }
+    }
+    if ($containerIds.Count -gt 0) {
+        docker rm -f @containerIds | Out-Null
+    }
+
+    # Remove Dispatch-related named volumes.
+    $volumeNames = docker volume ls --format "{{.Name}}" | Where-Object { $_ -match "dispatch" }
+    if ($volumeNames.Count -gt 0) {
+        docker volume rm @volumeNames | Out-Null
+    }
+
+    # Remove local Dispatch images (keep registry-backed ghcr images).
+    $imageRows = docker image ls --format "{{.Repository}}|{{.Tag}}|{{.ID}}" | Where-Object { $_ -and $_.Trim().Length -gt 0 }
+    $imageIds = @()
+    foreach ($row in $imageRows) {
+        $parts = $row -split "\|", 3
+        if ($parts.Length -lt 3) { continue }
+        $repo = $parts[0]
+        $id = $parts[2]
+        $isDispatchRelated = $repo -match "dispatch"
+        $isRegistryImage = $repo -match "/"
+        if ($isDispatchRelated -and -not $isRegistryImage) {
+            $imageIds += $id
+        }
+    }
+    if ($imageIds.Count -gt 0) {
+        $uniqueImageIds = $imageIds | Sort-Object -Unique
+        docker image rm -f @uniqueImageIds | Out-Null
+    }
+
+    Write-GreenLn "  Full dev Docker cleanup complete."
+    Write-Host ""
+}
+
 function Invoke-Setup {
+    param([string]$Mode = "")
+
     Show-Logo
+    if ($Mode -eq "full") {
+        Invoke-FullDevCleanup
+    }
     Assert-NodeModules
     Set-Location $PSScriptRoot
     npx tsx scripts/setup.ts
@@ -209,6 +286,99 @@ function Invoke-Lint {
     npm run lint
 }
 
+function Get-EnvValueFromFile {
+    param(
+        [string]$Path,
+        [string]$Key
+    )
+
+    if (-not (Test-Path $Path)) {
+        return $null
+    }
+
+    foreach ($line in Get-Content -Path $Path) {
+        $trimmed = $line.Trim()
+        if ($trimmed.Length -eq 0 -or $trimmed.StartsWith("#")) {
+            continue
+        }
+
+        $parts = $trimmed -split "=", 2
+        if ($parts.Length -ne 2) {
+            continue
+        }
+
+        if ($parts[0].Trim() -eq $Key) {
+            return $parts[1]
+        }
+    }
+
+    return $null
+}
+
+function Invoke-Publish {
+    Show-Logo
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-RedLn "  Docker is not installed or not on PATH."
+        exit 1
+    }
+
+    Set-Location $PSScriptRoot
+    $envFile = "$PSScriptRoot\.env.local"
+
+    $sourceImage = if ($env:DISPATCH_DEV_IMAGE) {
+        $env:DISPATCH_DEV_IMAGE
+    } else {
+        Get-EnvValueFromFile -Path $envFile -Key "DISPATCH_DEV_IMAGE"
+    }
+    if (-not $sourceImage) {
+        $sourceImage = "dispatch:latest"
+    }
+
+    $targetImage = if ($env:DISPATCH_IMAGE) {
+        $env:DISPATCH_IMAGE
+    } else {
+        Get-EnvValueFromFile -Path $envFile -Key "DISPATCH_IMAGE"
+    }
+    if (-not $targetImage) {
+        $targetImage = "ghcr.io/nkasco/dispatchtodoapp:latest"
+    }
+
+    Write-Host "  [1/3] " -NoNewline; Write-CyanLn "Building image ($sourceImage) with docker-compose.dev.yml..."
+    if (Test-Path $envFile) {
+        docker compose -f docker-compose.dev.yml --env-file .env.local build
+    } else {
+        docker compose -f docker-compose.dev.yml build
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-RedLn "  Docker build failed."
+        exit $LASTEXITCODE
+    }
+    Write-Host ""
+
+    Write-Host "  [2/3] " -NoNewline; Write-CyanLn "Tagging image for publish target ($targetImage)..."
+    if ($sourceImage -ne $targetImage) {
+        docker tag $sourceImage $targetImage
+        if ($LASTEXITCODE -ne 0) {
+            Write-RedLn "  Docker tag failed."
+            exit $LASTEXITCODE
+        }
+    } else {
+        Write-DimLn "  Source and target image are identical; skipping tag."
+    }
+    Write-Host ""
+
+    Write-Host "  [3/3] " -NoNewline; Write-CyanLn "Pushing image ($targetImage)..."
+    docker push $targetImage
+    if ($LASTEXITCODE -ne 0) {
+        Write-RedLn "  Docker push failed. Make sure you are logged into the target registry."
+        exit $LASTEXITCODE
+    }
+    Write-Host ""
+
+    Write-GreenLn "  Publish complete: $targetImage"
+    Write-Host ""
+}
+
 function Invoke-ResetDb {
     Show-Logo
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -236,8 +406,14 @@ function Invoke-ResetDb {
 }
 
 # ── Route ─────────────────────────────────────────────────────
+if ($SetupMode -and $Command -ne "setup") {
+    Write-RedLn "Invalid argument '$SetupMode' for command '$Command'."
+    Write-DimLn "Use: .\dispatch-dev.ps1 setup full"
+    exit 1
+}
+
 switch ($Command) {
-    "setup"   { Invoke-Setup }
+    "setup"   { Invoke-Setup -Mode $SetupMode }
     "dev"     { Invoke-Dev }
     "start"   { Invoke-Start }
     "build"   { Invoke-Build }
@@ -246,6 +422,7 @@ switch ($Command) {
     "studio"  { Invoke-Studio }
     "test"    { Invoke-Test }
     "lint"    { Invoke-Lint }
+    "publish" { Invoke-Publish }
     "resetdb" { Invoke-ResetDb }
     "version" { Write-Host "Dispatch v$Version" }
     "help"    { Show-Help }

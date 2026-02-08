@@ -4,6 +4,7 @@
 #
 # Usage:
 #   ./dispatch-dev.sh <command>
+#   ./dispatch-dev.sh setup full
 #
 # Commands:
 #   setup    Interactive setup (.env + Docker Compose startup)
@@ -15,6 +16,7 @@
 #   studio   Open Drizzle Studio (database GUI)
 #   test     Run the test suite
 #   lint     Run ESLint
+#   publish  Build dev image, tag, and push container image
 #   resetdb  Remove dev Docker volumes (fresh SQLite state)
 #   version  Show version number
 #   help     Show this help message
@@ -77,9 +79,12 @@ show_help() {
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "studio"  "Open Drizzle Studio (database GUI)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "test"    "Run the test suite"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "lint"    "Run ESLint"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "publish" "Build dev image, tag, and push container image"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "resetdb" "Remove dev Docker volumes (fresh SQLite state)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "version" "Show version number"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "help"    "Show this help message"
+    echo ""
+    echo -e "  ${DIM}Tip: './dispatch-dev.sh setup full' performs full dev Docker cleanup first.${RESET}"
     echo ""
 }
 
@@ -97,9 +102,96 @@ assert_node_modules() {
     fi
 }
 
+get_env_file_value() {
+    local target_key="$1"
+
+    if [ ! -f ".env.local" ]; then
+        return 1
+    fi
+
+    while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+        local line="${raw_line%$'\r'}"
+
+        case "$line" in
+            ""|\#*)
+                continue
+                ;;
+            "$target_key="*)
+                echo "${line#*=}"
+                return 0
+                ;;
+        esac
+    done < ".env.local"
+
+    return 1
+}
+
 # ── Commands ──────────────────────────────────────────────────
+full_dev_cleanup() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo -e "  ${RED}Docker is not installed or not on PATH.${RESET}"
+        exit 1
+    fi
+
+    echo -e "  ${YELLOW}Running full dev Docker cleanup...${RESET}"
+    echo ""
+
+    if [ -f ".env.local" ]; then
+        docker compose -f docker-compose.dev.yml --env-file .env.local down -v --remove-orphans
+    else
+        docker compose -f docker-compose.dev.yml down -v --remove-orphans
+    fi
+
+    # Remove additional Dispatch-related containers that are not registry-backed.
+    mapfile -t container_ids < <(docker ps -a --format '{{.ID}}|{{.Image}}|{{.Names}}' | awk -F'|' '
+        BEGIN { IGNORECASE=1 }
+        {
+          id=$1; image=$2; name=$3;
+          is_dispatch=(name ~ /dispatch/ || image ~ /dispatch/);
+          is_registry=(image ~ /\//);
+          if (is_dispatch && !is_registry) print id;
+        }
+    ')
+    if [ ${#container_ids[@]} -gt 0 ]; then
+        docker rm -f "${container_ids[@]}" >/dev/null
+    fi
+
+    # Remove Dispatch-related volumes.
+    mapfile -t volume_names < <(docker volume ls --format '{{.Name}}' | grep -Ei 'dispatch' || true)
+    if [ ${#volume_names[@]} -gt 0 ]; then
+        docker volume rm "${volume_names[@]}" >/dev/null
+    fi
+
+    # Remove local Dispatch images (keep ghcr registry images).
+    mapfile -t image_ids < <(docker image ls --format '{{.Repository}}|{{.Tag}}|{{.ID}}' | awk -F'|' '
+        BEGIN { IGNORECASE=1 }
+        {
+          repo=$1; id=$3;
+          is_dispatch=(repo ~ /dispatch/);
+          is_registry=(repo ~ /\//);
+          if (is_dispatch && !is_registry) print id;
+        }
+    ' | sort -u)
+    if [ ${#image_ids[@]} -gt 0 ]; then
+        docker image rm -f "${image_ids[@]}" >/dev/null
+    fi
+
+    echo ""
+    echo -e "  ${GREEN}Full dev Docker cleanup complete.${RESET}"
+    echo ""
+}
+
 cmd_setup() {
+    local mode="${1:-}"
     show_logo
+    if [ -n "$mode" ] && [ "$mode" != "full" ]; then
+        echo -e "  ${RED}Invalid setup mode: ${mode}${RESET}"
+        echo -e "  ${DIM}Use: ./dispatch-dev.sh setup full${RESET}"
+        exit 1
+    fi
+    if [ "$mode" = "full" ]; then
+        full_dev_cleanup
+    fi
     assert_node_modules
     npx tsx scripts/setup.ts
 }
@@ -190,6 +282,56 @@ cmd_lint() {
     npm run lint
 }
 
+cmd_publish() {
+    show_logo
+    if ! command -v docker >/dev/null 2>&1; then
+        echo -e "  ${RED}Docker is not installed or not on PATH.${RESET}"
+        exit 1
+    fi
+
+    local source_image="${DISPATCH_DEV_IMAGE:-}"
+    local target_image="${DISPATCH_IMAGE:-}"
+
+    if [ -z "$source_image" ]; then
+        source_image="$(get_env_file_value "DISPATCH_DEV_IMAGE" || true)"
+    fi
+    if [ -z "$source_image" ]; then
+        source_image="dispatch:latest"
+    fi
+
+    if [ -z "$target_image" ]; then
+        target_image="$(get_env_file_value "DISPATCH_IMAGE" || true)"
+    fi
+    if [ -z "$target_image" ]; then
+        target_image="ghcr.io/nkasco/dispatchtodoapp:latest"
+    fi
+
+    echo -e "  [1/3] ${CYAN}Building image (${source_image}) with docker-compose.dev.yml...${RESET}"
+    if [ -f ".env.local" ]; then
+        docker compose -f docker-compose.dev.yml --env-file .env.local build
+    else
+        docker compose -f docker-compose.dev.yml build
+    fi
+    echo ""
+
+    echo -e "  [2/3] ${CYAN}Tagging image for publish target (${target_image})...${RESET}"
+    if [ "$source_image" != "$target_image" ]; then
+        docker tag "$source_image" "$target_image"
+    else
+        echo -e "  ${DIM}Source and target image are identical; skipping tag.${RESET}"
+    fi
+    echo ""
+
+    echo -e "  [3/3] ${CYAN}Pushing image (${target_image})...${RESET}"
+    docker push "$target_image" || {
+        echo -e "  ${RED}Docker push failed. Make sure you are logged into the target registry.${RESET}"
+        exit 1
+    }
+    echo ""
+    echo -e "  ${GREEN}Publish complete: ${target_image}${RESET}"
+    echo ""
+}
+
 cmd_resetdb() {
     show_logo
     if ! command -v docker >/dev/null 2>&1; then
@@ -211,9 +353,16 @@ cmd_resetdb() {
 
 # ── Route ─────────────────────────────────────────────────────
 COMMAND="${1:-help}"
+SETUP_MODE="${2:-}"
+
+if [ -n "$SETUP_MODE" ] && [ "$COMMAND" != "setup" ]; then
+    echo -e "  ${RED}Invalid extra argument for command '${COMMAND}': ${SETUP_MODE}${RESET}"
+    echo -e "  ${DIM}Use: ./dispatch-dev.sh setup full${RESET}"
+    exit 1
+fi
 
 case "$COMMAND" in
-    setup)   cmd_setup ;;
+    setup)   cmd_setup "$SETUP_MODE" ;;
     dev)     cmd_dev ;;
     start)   cmd_start ;;
     build)   cmd_build ;;
@@ -222,6 +371,7 @@ case "$COMMAND" in
     studio)  cmd_studio ;;
     test)    cmd_test ;;
     lint)    cmd_lint ;;
+    publish) cmd_publish ;;
     resetdb) cmd_resetdb ;;
     version) echo "Dispatch v${VERSION}" ;;
     help)    show_help ;;

@@ -1,7 +1,6 @@
 services:
   dispatch:
-    image: ghcr.io/nkasco/dispatchtodoapp:latest
-    container_name: dispatch
+    image: "${DISPATCH_IMAGE:-ghcr.io/nkasco/dispatchtodoapp:latest}"
     restart: unless-stopped
     ports:
       - "${DISPATCH_PORT:-3000}:3000"

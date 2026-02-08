@@ -3,8 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: dispatch:latest
-    container_name: dispatch
+    image: "${DISPATCH_DEV_IMAGE:-dispatch:latest}"
     restart: unless-stopped
     ports:
       - "${DISPATCH_PORT:-3000}:3000"
