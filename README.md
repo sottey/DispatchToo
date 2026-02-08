@@ -142,9 +142,8 @@ Open `http://localhost:3000`.
 
 ### Dev Login (Optional)
 
-- Run `npm run db:seed` first to create the seeded account.
 - Seeded account: `test@dispatch.local` / `test`
-- Or create a local account from the login page
+  - Run `npm run db:seed` first to create the seeded account.
 
 ---
 
