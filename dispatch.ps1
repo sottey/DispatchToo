@@ -49,7 +49,7 @@ function Show-Help {
     Show-Logo
 
     Write-Host "  USAGE" -ForegroundColor White
-    Write-Host "    .\\dispatch.ps1 <command>"
+    Write-Host "    .\dispatch.ps1 <command>"
     Write-Host ""
     Write-Host "  COMMANDS" -ForegroundColor White
     Write-Host "    setup      Interactive production setup (.env.prod + optional start)"
@@ -64,7 +64,7 @@ function Show-Help {
     Write-Host "    help       Show this help message"
     Write-Host ""
     Write-DimLn "  Production config is stored in .env.prod"
-    Write-DimLn "  Developer workflow (npm build/test/dev) moved to .\\dispatch-dev.ps1"
+    Write-DimLn "  Developer workflow (npm build/test/dev) moved to .\dispatch-dev.ps1"
     Write-Host ""
 }
 
