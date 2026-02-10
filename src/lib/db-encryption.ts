@@ -30,6 +30,7 @@ function resolveSecurityStatePath(): string {
 }
 
 const SECURITY_STATE_PATH = resolveSecurityStatePath();
+let lastAppliedStateFingerprint: string | null = null;
 
 function getAuthSecret(): string {
   const secret = process.env.AUTH_SECRET?.trim();
@@ -79,6 +80,7 @@ export function writeDbEncryptionState(state: DbEncryptionState) {
   }
 
   writeFileSync(SECURITY_STATE_PATH, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+  lastAppliedStateFingerprint = null;
 }
 
 export function encryptDbPassphrase(passphrase: string): string {
@@ -122,7 +124,16 @@ function escapeSqliteString(value: string): string {
 export function isSqlCipherAvailable(sqlite: Database.Database): boolean {
   try {
     const version = sqlite.pragma("cipher_version", { simple: true }) as unknown;
-    return typeof version === "string" && version.trim().length > 0;
+    if (typeof version === "string" && version.trim().length > 0) {
+      return true;
+    }
+  } catch {
+    // Continue to sqlite3mc probe.
+  }
+
+  try {
+    const cipher = sqlite.pragma("cipher", { simple: true }) as unknown;
+    return typeof cipher === "string" && cipher.trim().length > 0;
   } catch {
     return false;
   }
@@ -146,8 +157,30 @@ export function verifyDatabaseReadable(sqlite: Database.Database): boolean {
 }
 
 export function applyDbEncryptionAtStartup(sqlite: Database.Database) {
+  return ensureDbEncryptionForRuntime(sqlite);
+}
+
+function getStateFingerprint(state: DbEncryptionState): string {
+  return `${state.enabled ? "1" : "0"}:${state.updatedAt}`;
+}
+
+export function ensureDbEncryptionForRuntime(sqlite: Database.Database) {
   const state = readDbEncryptionState();
-  if (!state.enabled) return state;
+  const fingerprint = getStateFingerprint(state);
+  if (lastAppliedStateFingerprint === fingerprint) {
+    return state;
+  }
+
+  if (!state.enabled) {
+    if (isSqlCipherAvailable(sqlite)) {
+      applySqlCipherKey(sqlite, "");
+    }
+    if (!verifyDatabaseReadable(sqlite)) {
+      throw new Error("Failed to read the unencrypted database after encryption state update.");
+    }
+    lastAppliedStateFingerprint = fingerprint;
+    return state;
+  }
 
   if (!isSqlCipherAvailable(sqlite)) {
     throw new Error("Database encryption is enabled but SQLCipher support is not available.");
@@ -163,5 +196,6 @@ export function applyDbEncryptionAtStartup(sqlite: Database.Database) {
     throw new Error("Failed to unlock the encrypted database with the configured passphrase.");
   }
 
+  lastAppliedStateFingerprint = fingerprint;
   return state;
 }

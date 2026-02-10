@@ -2,12 +2,17 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db } from "@/db";
+import { db, sqlite } from "@/db";
 import { users, accounts, sessions } from "@/db/schema";
+import { ensureDbEncryptionForRuntime } from "@/lib/db-encryption";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 type UserRole = "member" | "admin";
+
+function ensureAuthDatabaseReady() {
+  ensureDbEncryptionForRuntime(sqlite);
+}
 
 function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
   if (typeof code !== "string" || code !== "JWTSessionError") return false;
@@ -32,6 +37,7 @@ function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
 async function getUserAccess(
   userId: string,
 ): Promise<{ role: UserRole; isFrozen: boolean; showAdminQuickAccess: boolean }> {
+  ensureAuthDatabaseReady();
   const [dbUser] = await db
     .select({
       role: users.role,
@@ -65,6 +71,7 @@ providers.push(
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
+      ensureAuthDatabaseReady();
       const email = credentials?.email as string;
       const password = credentials?.password as string;
 
@@ -111,6 +118,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
+      ensureAuthDatabaseReady();
       // Block sign-in if the user record wasn't created (shouldn't happen, but guard)
       if (!user?.id) return false;
       const [dbUser] = await db
@@ -156,10 +164,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (token.sub) {
-        const access = await getUserAccess(token.sub);
-        token.role = access.role;
-        token.isFrozen = access.isFrozen;
-        token.showAdminQuickAccess = access.showAdminQuickAccess;
+        try {
+          const access = await getUserAccess(token.sub);
+          token.role = access.role;
+          token.isFrozen = access.isFrozen;
+          token.showAdminQuickAccess = access.showAdminQuickAccess;
+        } catch (error) {
+          // Avoid invalidating the active session during transient rekey transitions.
+          console.error("Failed to refresh JWT access claims from database:", error);
+          token.role = (token.role as UserRole | undefined) ?? "member";
+          token.isFrozen = Boolean(token.isFrozen);
+          token.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
+        }
       }
 
       return token;
