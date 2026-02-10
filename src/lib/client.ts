@@ -149,6 +149,13 @@ export class ApiError extends Error {
 
 // ---- Fetch wrapper ----
 
+export const TASKS_CHANGED_EVENT = "tasks:changed";
+
+function emitTasksChanged(detail: { action: "create" | "update" | "delete"; taskId?: string }) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail }));
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -244,7 +251,11 @@ export const api = {
       priority?: TaskPriority;
       dueDate?: string;
       projectId?: string | null;
-    }) => request<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }),
+    }) =>
+      request<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }).then((task) => {
+        emitTasksChanged({ action: "create", taskId: task.id });
+        return task;
+      }),
 
     update: (
       id: string,
@@ -256,10 +267,17 @@ export const api = {
         dueDate?: string | null;
         projectId?: string | null;
       },
-    ) => request<Task>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    ) =>
+      request<Task>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }).then((task) => {
+        emitTasksChanged({ action: "update", taskId: task.id });
+        return task;
+      }),
 
     delete: (id: string) =>
-      request<{ deleted: true }>(`/tasks/${id}`, { method: "DELETE" }),
+      request<{ deleted: true }>(`/tasks/${id}`, { method: "DELETE" }).then((result) => {
+        emitTasksChanged({ action: "delete", taskId: id });
+        return result;
+      }),
   },
 
   projects: {
