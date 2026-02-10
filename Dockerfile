@@ -31,6 +31,7 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/src/db/schema.ts ./src/db/schema.ts
 COPY --from=builder /app/docker/entrypoint.sh ./docker/entrypoint.sh
+COPY --from=builder /app/docker/repair-migrations.js ./docker/repair-migrations.js
 
 RUN mkdir -p /app/data
 RUN chown -R dispatch:nodejs /app
