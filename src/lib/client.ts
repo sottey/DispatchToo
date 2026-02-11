@@ -4,6 +4,7 @@ export type TaskStatus = "open" | "in_progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 export type ProjectStatus = "active" | "paused" | "completed";
 export type UserRole = "member" | "admin";
+export type AIProvider = "openai" | "anthropic" | "google" | "ollama" | "lmstudio" | "custom";
 
 export interface Project {
   id: string;
@@ -122,7 +123,60 @@ export interface AdminSecuritySettings {
 }
 
 export interface MePreferences {
-  showAdminQuickAccess: boolean;
+  showAdminQuickAccess?: boolean;
+  assistantEnabled?: boolean;
+}
+
+export interface AIConfig {
+  id: string;
+  provider: AIProvider;
+  providerLabel: string;
+  model: string;
+  baseUrl: string | null;
+  isActive: boolean;
+  hasApiKey: boolean;
+  maskedApiKey: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIModelInfo {
+  id: string;
+  label: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount?: number;
+  lastMessage?: {
+    content: string;
+    role: "user" | "assistant" | "system";
+    createdAt: string;
+  } | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  model: string | null;
+  tokenCount: number | null;
+  createdAt: string;
+}
+
+export interface ChatConversationDetail {
+  conversation: ChatConversation;
+  messages: ChatMessage[];
+  uiMessages: Array<{
+    id: string;
+    role: "user" | "assistant" | "system";
+    parts: Array<{ type: "text"; text: string }>;
+  }>;
 }
 
 export interface PaginatedResponse<T> {
@@ -436,6 +490,54 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(data),
       }),
+  },
+
+  ai: {
+    config: {
+      get: () => request<{ config: AIConfig | null; defaults?: { provider: AIProvider; model: string; baseUrl: string | null } }>("/ai/config"),
+
+      update: (data: {
+        provider?: AIProvider;
+        apiKey?: string | null;
+        baseUrl?: string | null;
+        model?: string;
+        isActive?: boolean;
+      }) =>
+        request<{ config: AIConfig }>("/ai/config", {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }),
+
+      test: () =>
+        request<{ success: boolean; provider: AIProvider; providerLabel: string; model: string }>("/ai/config/test"),
+
+      models: () =>
+        request<{ provider: AIProvider; providerLabel: string; model: string; models: AIModelInfo[] }>("/ai/models"),
+    },
+
+    conversations: {
+      list: () => request<ChatConversation[]>("/ai/conversations"),
+
+      create: (data?: { title?: string }) =>
+        request<ChatConversation>("/ai/conversations", {
+          method: "POST",
+          body: JSON.stringify(data ?? {}),
+        }),
+
+      get: (id: string) => request<ChatConversationDetail>(`/ai/conversations/${id}`),
+
+      update: (id: string, data: { title: string }) =>
+        request<ChatConversation>(`/ai/conversations/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }),
+
+      delete: (id: string) =>
+        request<{ deleted: true }>(`/ai/conversations/${id}`, { method: "DELETE" }),
+    },
+
+    mcpHealth: () =>
+      request<{ reachable: boolean; url: string; error?: string }>("/ai/mcp/health"),
   },
 
   me: {
