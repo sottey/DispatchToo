@@ -9,6 +9,7 @@
     "mcp:start": "tsx src/mcp-server/index.ts",
     "build": "next build",
     "start": "next start",
+    "start:all": "concurrently -k -n NEXT,MCP -c cyan,magenta \"npm run start\" \"npm run mcp:start\"",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
