@@ -310,6 +310,66 @@ Browser (useChat)  ──>  POST /api/ai/chat  ──>  MCP Client (@ai-sdk/mcp)
 - [x] **14.36** Write tests for the MCP server tools: mock the Drizzle DB, register tools, invoke them via the MCP client SDK, and assert correct DB operations and response formats. Test user-scoping isolation (tools should never return or modify another user's data).
 - [x] **14.37** Add a health-check indicator for the MCP server connection in the Personal Assistant UI — show a green/red dot or badge indicating whether the tool server is reachable. If unreachable, the assistant still works for conversation but tools are unavailable; show a warning banner explaining this.
 
-Phase 15 - Multi-Device Optimizations
-- [ ] **15.1** Validate and improve responsive behavior for iPhone-sized screens, iPad/tablet breakpoints, and smaller desktop windows.
+## Phase 15: Dashboard Visual Upgrade
 
+Transform the dashboard from a plain, functional layout into a polished, warm, modern analytics dashboard. Inspired by contemporary analytics UIs: soft warm backgrounds, subtle depth, rich data visualizations, and user-customizable widget layout. Must look great in both light and dark mode.
+
+### 15A — Visual Foundation (globals.css + Dashboard shell)
+
+- [x] **15.1** Add `.dashboard-warm` CSS class with warm cream gradient background for light mode (`#faf7f2` tones) and warm charcoal for dark mode (`#141210` tones). Scoped to dashboard only, not global.
+- [x] **15.2** Add `.dashboard-card` CSS class replacing the current `rounded-xl border border-neutral-200 ... shadow-sm` pattern with softer cards: semi-transparent background (`rgba(255,255,255,0.82)`), near-invisible borders, multi-layer shadows, `rounded-2xl`. Dark mode variant with warm charcoal tones.
+- [x] **15.3** Add `.dashboard-hero-gradient` CSS class with a teal-to-blue gradient (light: `teal-400 -> cyan-500 -> blue-600`, dark: `teal-600 -> cyan-700 -> blue-800`).
+- [x] **15.4** Add chart animation keyframes: `donut-fill` (animated arc fill for donut charts), `bar-grow` (bars grow from bottom for trend chart), plus corresponding utility classes.
+- [x] **15.5** Wrap Dashboard content in `dashboard-warm` container and replace all card classes with `dashboard-card`. Widen from `max-w-5xl` to `max-w-6xl`.
+
+### 15B — New Chart Widgets (4 new components in `src/components/dashboard/`)
+
+- [x] **15.6** Build `TaskStatusDonut.tsx` — multi-segment SVG donut chart showing task distribution by status (open=blue, in_progress=amber, done=emerald). Extends the existing `FocusRing` SVG circle pattern. Center label with total active count. Color legend below.
+- [x] **15.7** Build `WeeklyTrendChart.tsx` — compact 7-day bar + line chart (bars=created tasks, line=completed tasks). Reuses `buildDailyPoints` from `src/lib/insights.ts`. Adapts the SVG chart pattern from `InsightsPage.tsx`. Day-of-week labels along bottom axis.
+- [x] **15.8** Build `PriorityDistribution.tsx` — horizontal stacked bar showing active task counts by priority (high=red, medium=amber, low=emerald). Percentage labels and count overlay.
+- [x] **15.9** Build `ProjectProgressRings.tsx` — concentric ring chart for top 3 projects using `PROJECT_COLORS` from `src/lib/projects.ts`. Each ring shows completion percentage with project name legend.
+
+### 15C — Widget Customization System
+
+- [x] **15.10** Create `src/lib/dashboard-layout.ts` with `useDashboardLayout()` hook — widget registry (9 widgets: hero-stats, weekly-trend, task-donut, priority-dist, project-signals, project-rings, upcoming, recent-notes, recent-activity), `toggleWidget(id)`, `reorderWidgets(fromIndex, toIndex)`, `resetLayout()`. Persists to localStorage. Auto-merges saved config with current registry.
+- [x] **15.11** Build `DashboardCustomizePanel.tsx` — dropdown panel with toggle switches for show/hide and drag-and-drop reorder using HTML5 Drag and Drop API (no external library). Drag handles, visual drop indicator, "Reset to Default" button. Closes on outside click.
+- [x] **15.12** Add `IconCog` (or `IconAdjustments`) and `IconGripVertical` icons to `src/components/icons.tsx` for the customize button and drag handles.
+- [x] **15.13** Add "Customize" gear button to the dashboard header that opens the customize panel.
+
+### 15D — Layout Restructure (Dashboard.tsx)
+
+- [x] **15.14** Restructure the dashboard grid layout: Row 1 = Header + Customize button; Row 2 = Hero Active Tasks card (span 2, teal-blue gradient) + Notes + Dispatches; Row 3 = Deadline Focus + Task Donut + Weekly Trend (span 2); Row 4 = Priority Distribution + Project Rings + Active Projects + Project Activity; Row 5 = Upcoming Deadlines + Recent Notes; Row 6 = Task Activity + Note Activity.
+- [x] **15.15** Make the Hero stat card (Active Tasks) span 2 columns with the `.dashboard-hero-gradient` teal-to-blue gradient, larger font, and a mini sparkline of recent task activity.
+- [x] **15.16** Integrate all 4 new chart widgets into the dashboard, computing data from existing fetched state (tasks, projects) plus `buildDailyPoints(tasks, 7)` from `src/lib/insights.ts`.
+- [x] **15.17** Wire widget rendering to the `useDashboardLayout` hook — only render visible widgets, in the user's custom order.
+- [x] **15.18** Update the skeleton loading state to match the new layout structure.
+
+### 15E — Polish & Verification
+
+- [x] **15.19** Verify all new elements in both light and dark mode. Ensure warm dashboard background doesn't clash with the cool sidebar (`bg-neutral-950`).
+- [x] **15.20** Add `prefers-reduced-motion` support for new chart animations. Test responsive breakpoints (mobile single column, tablet 2 cols, desktop full grid with spanning).
+- [x] **15.21** Run `npm run build` and `npm test` to verify no TypeScript errors and existing tests still pass.
+
+## Phase 16: Repository Cleanup, Dependency Hygiene & Security Hardening
+
+Systematically simplify the codebase, remove unused tooling/dependencies, and resolve security risks without introducing functional gaps.
+
+- [ ] **16.1** Establish a baseline before cleanup: run `npm run build` and `npm test`, record results, and snapshot bundle/dependency footprint for comparison.
+- [ ] **16.2** Perform a full dependency inventory (runtime + dev) and classify each package as required, optional, or removable based on actual repository usage.
+- [ ] **16.3** Detect unused dependencies, exports, and files using static analysis plus manual verification; confirm no dynamic imports/tooling paths are accidentally flagged.
+- [ ] **16.4** Remove unused npm packages, stale scripts, and obsolete config entries from `package.json` and related tooling files.
+- [ ] **16.5** Resolve dependency duplication and version drift (single-version strategy where possible), then refresh lockfile cleanly.
+- [ ] **16.6** Run a security pass (`npm audit` + manual review) and remediate vulnerabilities with the least disruptive upgrades first.
+- [ ] **16.7** For vulnerabilities without safe auto-fixes, apply targeted package upgrades/refactors and document risk/tradeoff decisions.
+- [ ] **16.8** Replace deprecated or unmaintained dependencies with actively maintained alternatives when practical.
+- [ ] **16.9** Prune dead code and stale assets: unused components, helpers, styles, scripts, and docs sections that no longer reflect current behavior.
+- [ ] **16.10** Simplify developer tooling/scripts (build, test, db, dev) to reduce overlap and keep one clear path per workflow.
+- [ ] **16.11** Re-verify app integrity end-to-end after cleanup: auth flows, core CRUD, assistant/MCP paths, migrations, and responsive UI behavior.
+- [ ] **16.12** Final validation gate: `npm run build`, `npm test`, and zero known high/critical vulnerabilities; update `spec.md` and release notes/version to capture cleanup outcomes.
+- [ ] **16.13** Audit repository exposure boundaries for GitHub and Docker: identify sensitive/personal local files (keys, env files, notes, exports, IDE/system artifacts) that must never be committed or copied into images.
+- [ ] **16.14** Review and update `.gitignore` and `.dockerignore` to enforce those boundaries, including env/secrets, local DB files, logs, caches, temp files, OS artifacts, and personal workspace files.
+- [ ] **16.15** Validate ignore behavior with dry-run checks (`git status`, Docker build context inspection) to confirm protected files are excluded before any push/build.
+- [ ] **16.16** Add or verify automated secret-leak safeguards (pre-commit and/or CI secret scanning) and document the expected workflow for handling accidental exposure.
+
+Phase 17 - Multi-Device Optimizations
+- [ ] **17.1** Validate and improve responsive behavior for iPhone-sized screens, iPad/tablet breakpoints, and smaller desktop windows.

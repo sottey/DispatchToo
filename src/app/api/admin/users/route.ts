@@ -4,6 +4,10 @@ import { accounts, users } from "@/db/schema";
 import { withAdminAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { eq } from "drizzle-orm";
 
+// SCOADD
+import * as crypto from 'node:crypto';
+
+
 const VALID_ROLES = ["member", "admin"] as const;
 
 /** GET /api/admin/users — list all users (admin only) */

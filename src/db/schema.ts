@@ -1,6 +1,9 @@
 import { sqliteTable, text, integer, primaryKey, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// SCOADD
+import * as crypto from 'node:crypto';
+
 // --- NextAuth tables (must match @auth/drizzle-adapter expectations) ---
 
 export const users = sqliteTable("user", {

@@ -5,6 +5,10 @@ import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { jsonResponse, errorResponse } from "@/lib/api";
 
+// SCOADD
+import * as crypto from 'node:crypto';
+
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

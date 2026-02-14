@@ -385,3 +385,67 @@ html.theme-transitioning * {
 .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
   background-color: rgb(59 130 246 / 0.55);
 }
+
+/* Dashboard visual foundation */
+.dashboard-warm {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(245, 234, 218, 0.58), transparent 62%),
+    radial-gradient(140% 120% at 100% 0%, rgba(220, 246, 242, 0.4), transparent 60%),
+    linear-gradient(180deg, #faf7f2 0%, #f3efe8 100%);
+  min-height: 100%;
+}
+
+:is(.dark) .dashboard-warm {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(30, 42, 46, 0.36), transparent 62%),
+    radial-gradient(120% 120% at 100% 0%, rgba(24, 35, 40, 0.44), transparent 60%),
+    linear-gradient(180deg, #141210 0%, #171513 100%);
+}
+
+.dashboard-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 1px 1px rgba(24, 24, 24, 0.03),
+    0 8px 16px rgba(24, 24, 24, 0.06);
+}
+
+:is(.dark) .dashboard-card {
+  border-color: rgba(73, 64, 55, 0.45);
+  background-color: rgba(32, 28, 24, 0.82);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.28),
+    0 10px 20px rgba(0, 0, 0, 0.28);
+}
+
+.dashboard-card-interactive {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.dashboard-card-interactive:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 1px 1px rgba(24, 24, 24, 0.05),
+    0 10px 22px rgba(24, 24, 24, 0.1);
+}
+
+:is(.dark) .dashboard-card-interactive:hover {
+  border-color: rgba(34, 211, 238, 0.4);
+  background-color: rgba(37, 31, 26, 0.9);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.34),
+    0 12px 24px rgba(0, 0, 0, 0.36);
+}
+
+.dashboard-hero-gradient {
+  background-image: linear-gradient(135deg, #2dd4bf 0%, #06b6d4 48%, #2563eb 100%);
+}
+
+:is(.dark) .dashboard-hero-gradient {
+  background-image: linear-gradient(135deg, #0d9488 0%, #0e7490 48%, #1e40af 100%);
+}

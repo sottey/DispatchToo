@@ -229,3 +229,19 @@ export function IconSparkles({ className = "w-5 h-5" }: { className?: string }) 
     </svg>
   );
 }
+
+export function IconCog({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0 1 12.97-5.303M19.5 12a7.5 7.5 0 0 1-12.97 5.303M15 9.75h3.75V6m-13.5 8.25H1.5V18m10.5-2.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+    </svg>
+  );
+}
+
+export function IconGripVertical({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5.25h.008v.008H9V5.25Zm0 6.75h.008v.008H9V12Zm0 6.75h.008v.008H9v-.008Zm6-13.5h.008v.008H15V5.25Zm0 6.75h.008v.008H15V12Zm0 6.75h.008v.008H15v-.008Z" />
+    </svg>
+  );
+}
