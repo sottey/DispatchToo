@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type DashboardWidgetId =
   | "hero-stats"
-  | "weekly-trend"
   | "task-donut"
+  | "upcoming"
   | "priority-dist"
   | "project-signals"
   | "project-rings"
-  | "upcoming"
-  | "recent-notes"
   | "recent-activity";
 
 export type DashboardWidgetDefinition = {
@@ -29,7 +27,7 @@ type StoredDashboardLayout = {
   visibility?: Record<string, boolean>;
 };
 
-const STORAGE_KEY = "dispatch.dashboard.layout.v1";
+const STORAGE_KEY = "dispatch.dashboard.layout.v2";
 
 export const DASHBOARD_WIDGET_REGISTRY: DashboardWidgetDefinition[] = [
   {
@@ -45,9 +43,9 @@ export const DASHBOARD_WIDGET_REGISTRY: DashboardWidgetDefinition[] = [
     defaultVisible: true,
   },
   {
-    id: "weekly-trend",
-    label: "Weekly Trend",
-    description: "Created vs completed activity over the last 7 days.",
+    id: "upcoming",
+    label: "Upcoming Deadlines",
+    description: "Overdue, today, and next-up due dates.",
     defaultVisible: true,
   },
   {
@@ -66,18 +64,6 @@ export const DASHBOARD_WIDGET_REGISTRY: DashboardWidgetDefinition[] = [
     id: "project-signals",
     label: "Project Signals",
     description: "Active projects and recent project-linked task changes.",
-    defaultVisible: true,
-  },
-  {
-    id: "upcoming",
-    label: "Upcoming Deadlines",
-    description: "Overdue, today, and next-up due dates.",
-    defaultVisible: true,
-  },
-  {
-    id: "recent-notes",
-    label: "Recent Notes",
-    description: "Most recently edited notes in your workspace.",
     defaultVisible: true,
   },
   {

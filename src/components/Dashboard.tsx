@@ -16,7 +16,6 @@ import { DashboardCustomizePanel } from "@/components/dashboard/DashboardCustomi
 import { PriorityDistribution } from "@/components/dashboard/PriorityDistribution";
 import { ProjectProgressRings } from "@/components/dashboard/ProjectProgressRings";
 import { TaskStatusDonut } from "@/components/dashboard/TaskStatusDonut";
-import { WeeklyTrendChart } from "@/components/dashboard/WeeklyTrendChart";
 import {
   IconCalendar,
   IconCog,
@@ -35,12 +34,10 @@ const STATUS_BADGES: Record<TaskStatus, string> = {
 const WIDGET_SPAN_CLASSES: Record<DashboardWidgetId, string> = {
   "hero-stats": "xl:col-span-4",
   "task-donut": "xl:col-span-2",
-  "weekly-trend": "xl:col-span-2",
+  upcoming: "xl:col-span-2",
   "priority-dist": "xl:col-span-1",
   "project-rings": "xl:col-span-1",
   "project-signals": "xl:col-span-2",
-  upcoming: "xl:col-span-2",
-  "recent-notes": "xl:col-span-2",
   "recent-activity": "xl:col-span-4",
 };
 
@@ -69,7 +66,6 @@ type WidgetData = {
   overdueCount: number;
   dueTodayCount: number;
   dueSoonCount: number;
-  dailyPoints: ReturnType<typeof buildDailyPoints>;
   priorityCounts: { high: number; medium: number; low: number };
   topProjects: ProjectWithStats[];
   recentProjectActivity: Array<{
@@ -80,7 +76,6 @@ type WidgetData = {
     updatedAt: string;
   }>;
   upcoming: Task[];
-  recentNotes: Note[];
   recentTaskActivity: ActivityItem[];
   recentNoteActivity: ActivityItem[];
 };
@@ -157,10 +152,6 @@ export function Dashboard({ userName }: { userName: string }) {
   const notesThisWeek = notes.filter(
     (note) => new Date(note.updatedAt).getTime() >= weekStart.getTime(),
   ).length;
-
-  const recentNotes = [...notes]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 4);
 
   const recentActivity: ActivityItem[] = [
     ...tasks.map((task) => ({
@@ -260,12 +251,10 @@ export function Dashboard({ userName }: { userName: string }) {
     overdueCount: overdue.length,
     dueTodayCount: dueToday.length,
     dueSoonCount: dueSoon.length,
-    dailyPoints,
     priorityCounts,
     topProjects,
     recentProjectActivity,
     upcoming,
-    recentNotes,
     recentTaskActivity,
     recentNoteActivity,
   };
@@ -285,8 +274,6 @@ export function Dashboard({ userName }: { userName: string }) {
             <div className="h-56 rounded-3xl skeleton-shimmer" />
             <div className="h-56 rounded-3xl skeleton-shimmer" />
             <div className="h-56 rounded-3xl skeleton-shimmer xl:col-span-2" />
-            <div className="h-60 rounded-3xl skeleton-shimmer xl:col-span-2" />
-            <div className="h-60 rounded-3xl skeleton-shimmer xl:col-span-2" />
             <div className="h-52 rounded-3xl skeleton-shimmer xl:col-span-4" />
           </div>
         </div>
@@ -461,16 +448,6 @@ function DashboardWidget({
           </div>
         </section>
       );
-    case "weekly-trend":
-      return (
-        <section className="dashboard-card dashboard-card-interactive h-full p-5">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Weekly Trend</h2>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">7 days</span>
-          </div>
-          <WeeklyTrendChart points={data.dailyPoints} />
-        </section>
-      );
     case "priority-dist":
       return (
         <section className="dashboard-card dashboard-card-interactive h-full p-5">
@@ -580,33 +557,6 @@ function DashboardWidget({
             <div className="space-y-2">
               {data.upcoming.map((task, index) => (
                 <DueItem key={task.id} task={task} index={index} />
-              ))}
-            </div>
-          )}
-        </section>
-      );
-    case "recent-notes":
-      return (
-        <section className="dashboard-card dashboard-card-interactive h-full p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Recent Notes</h2>
-            <Link href="/notes" className="text-xs text-cyan-700 hover:underline dark:text-cyan-300">Notes</Link>
-          </div>
-          {data.recentNotes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300/80 bg-white/65 p-8 text-center text-sm text-neutral-500 dark:border-neutral-600/80 dark:bg-neutral-800/35 dark:text-neutral-400">
-              No notes yet.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {data.recentNotes.map((note) => (
-                <Link
-                  key={note.id}
-                  href={`/notes/${note.id}`}
-                  className="block rounded-xl border border-neutral-200/70 bg-white/70 px-3 py-2.5 transition-colors hover:bg-white/95 dark:border-neutral-700/80 dark:bg-neutral-800/35 dark:hover:bg-neutral-800/55"
-                >
-                  <p className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">{note.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{new Date(note.updatedAt).toLocaleDateString()}</p>
-                </Link>
               ))}
             </div>
           )}
