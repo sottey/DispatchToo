@@ -8,6 +8,7 @@ import {
   type TaskPriority,
   type Project,
 } from "@/lib/client";
+import { addDaysToDateKey, formatDateKeyForDisplay, todayDateKey } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import { IconInbox, IconClock, IconTrash } from "@/components/icons";
 import { PROJECT_COLORS } from "@/lib/projects";
@@ -32,12 +33,8 @@ const PRIORITY_ORDER: Record<TaskPriority, number> = {
 
 const COMPLETE_DISMISS_MS = 420;
 
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
-
 function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+  return formatDateKeyForDisplay(dateStr, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -56,7 +53,7 @@ export function PriorityInboxPage() {
   const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const today = todayStr();
+  const today = todayDateKey();
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -214,9 +211,7 @@ export function PriorityInboxPage() {
 
     let newDueDate: string | null = null;
     if (days !== null) {
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      newDueDate = date.toISOString().split("T")[0];
+      newDueDate = addDaysToDateKey(todayDateKey(), days);
     }
 
     setTasks((prev) =>

@@ -3,37 +3,21 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/db";
 import { dispatches, dispatchTasks, tasks } from "@/db/schema";
+import { getOrCreateDispatchForDate } from "@/lib/dispatch-template";
+import { addDaysToDateKey, todayDateKey } from "@/lib/datetime";
 import { requireUserId, textResult } from "@/mcp-server/tools/context";
 
 function todayISODate(): string {
-  return new Date().toISOString().split("T")[0];
+  return todayDateKey();
 }
 
 function nextDate(date: string): string {
-  const d = new Date(`${date}T00:00:00`);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
+  return addDaysToDateKey(date, 1);
 }
 
 async function getOrCreateDispatch(userId: string, date: string) {
-  const [existing] = await db
-    .select()
-    .from(dispatches)
-    .where(and(eq(dispatches.userId, userId), eq(dispatches.date, date)))
-    .limit(1);
-  if (existing) return existing;
-
-  const now = new Date().toISOString();
-  const [created] = await db
-    .insert(dispatches)
-    .values({
-      userId,
-      date,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-  return created;
+  const { dispatch } = await getOrCreateDispatchForDate(userId, date);
+  return dispatch;
 }
 
 export function registerDispatchTools(server: McpServer) {

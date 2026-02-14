@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockSession } from "@/test/setup";
 import { createTestDb } from "@/test/db";
-import { notes, users } from "@/db/schema";
+import { dispatchTasks, notes, tasks, users } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 
 // Set up a fresh in-memory DB before each test and mock @/db
@@ -164,6 +164,137 @@ describe("Dispatches API", () => {
         {}
       );
       expect(res.status).toBe(400);
+    });
+
+    it("creates template tasks for matching day/month/dom conditions", async () => {
+      testDb.db
+        .insert(notes)
+        .values({
+          id: "note-template-1",
+          userId: TEST_USER.id,
+          title: "TasklistTemplate",
+          content: [
+            "{{if:day=sat}}",
+            "- [ ] Weeding #home +home >{{date:YYYY-MM-DD}}",
+            "{{endif}}",
+            "{{if:day=weekday}}",
+            "- [ ] Weekday-only task",
+            "{{endif}}",
+            "{{if:day=weekend}}",
+            "- [ ] Weekend-only task",
+            "{{endif}}",
+            "{{if:dom=14}}",
+            "- [ ] Mid-month check >{{date:YYYY-MM-DD}}",
+            "{{endif}}",
+            "{{if:month=jun&dom=14}}",
+            "- [ ] Anniversary reminder",
+            "{{endif}}",
+            "{{if:day=sat,wed}}",
+            "- [ ] Multi-day task",
+            "{{endif}}",
+          ].join("\n"),
+        })
+        .run();
+
+      const res = await POST(
+        jsonReq("http://localhost/api/dispatches", "POST", { date: "2025-06-14" }),
+        {},
+      );
+
+      expect(res.status).toBe(201);
+      const createdDispatch = await res.json();
+
+      const linkedRows = testDb.db
+        .select({
+          title: tasks.title,
+          dueDate: tasks.dueDate,
+        })
+        .from(dispatchTasks)
+        .innerJoin(tasks, eq(dispatchTasks.taskId, tasks.id))
+        .where(eq(dispatchTasks.dispatchId, createdDispatch.id))
+        .all();
+
+      expect(linkedRows.map((row) => row.title).sort()).toEqual([
+        "Anniversary reminder",
+        "Mid-month check",
+        "Multi-day task",
+        "Weeding #home +home",
+        "Weekend-only task",
+      ]);
+
+      const dueDatesByTitle = new Map(linkedRows.map((row) => [row.title, row.dueDate]));
+      expect(dueDatesByTitle.get("Weeding #home +home")).toBe("2025-06-14");
+      expect(dueDatesByTitle.get("Mid-month check")).toBe("2025-06-14");
+      expect(dueDatesByTitle.get("Anniversary reminder")).toBeNull();
+    });
+
+    it("does not create template tasks when conditions do not match", async () => {
+      testDb.db
+        .insert(notes)
+        .values({
+          id: "note-template-2",
+          userId: TEST_USER.id,
+          title: "TasklistTemplate",
+          content: [
+            "{{if:day=sat}}",
+            "- [ ] Weekend chore",
+            "{{endif}}",
+            "{{if:month=jan&dom=15}}",
+            "- [ ] Tax reminder",
+            "{{endif}}",
+          ].join("\n"),
+        })
+        .run();
+
+      const res = await POST(
+        jsonReq("http://localhost/api/dispatches", "POST", { date: "2025-06-16" }),
+        {},
+      );
+
+      expect(res.status).toBe(201);
+      const createdDispatch = await res.json();
+
+      const linkedRows = testDb.db
+        .select({ taskId: dispatchTasks.taskId })
+        .from(dispatchTasks)
+        .where(eq(dispatchTasks.dispatchId, createdDispatch.id))
+        .all();
+
+      expect(linkedRows).toHaveLength(0);
+    });
+
+    it("supports inline single-line if syntax without endif", async () => {
+      testDb.db
+        .insert(notes)
+        .values({
+          id: "note-template-inline",
+          userId: TEST_USER.id,
+          title: "TasklistTemplate",
+          content: [
+            "{{if:day=tue}}- [ ] Take out bins #home +home >{{date:YYYY-MM-DD}}",
+            "{{if:day=wed}}- [ ] Bring in bins #home +home >{{date:YYYY-MM-DD}}",
+            "{{if:month=jan&dom=15}}- [ ] Emma's Birthday #home +home >{{date:YYYY-MM-DD}}",
+          ].join("\n"),
+        })
+        .run();
+
+      const tuesdayRes = await POST(
+        jsonReq("http://localhost/api/dispatches", "POST", { date: "2025-06-17" }),
+        {},
+      );
+      expect(tuesdayRes.status).toBe(201);
+      const tuesdayDispatch = await tuesdayRes.json();
+
+      const tuesdayTasks = testDb.db
+        .select({ title: tasks.title, dueDate: tasks.dueDate })
+        .from(dispatchTasks)
+        .innerJoin(tasks, eq(dispatchTasks.taskId, tasks.id))
+        .where(eq(dispatchTasks.dispatchId, tuesdayDispatch.id))
+        .all();
+
+      expect(tuesdayTasks).toHaveLength(1);
+      expect(tuesdayTasks[0].title).toBe("Take out bins #home +home");
+      expect(tuesdayTasks[0].dueDate).toBe("2025-06-17");
     });
   });
 

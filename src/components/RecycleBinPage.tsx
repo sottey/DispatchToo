@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api, type RecycleBinItem } from "@/lib/client";
+import { formatTimestamp } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import { IconTrash } from "@/components/icons";
 
@@ -25,8 +26,7 @@ function daysUntilPurge(deletedAt: string, retentionDays: number): number {
 }
 
 function formatDeletedDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return formatTimestamp(iso, { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function RecycleBinPage() {

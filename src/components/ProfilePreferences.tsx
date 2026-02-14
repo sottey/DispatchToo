@@ -35,6 +35,8 @@ const DEFAULT_MODEL: Record<AIProvider, string> = {
   custom: "gpt-4o-mini",
 };
 
+const DISPATCH_HELP_PREF_KEY = "dispatch-show-help";
+
 export function ProfilePreferences({
   isAdmin = false,
   showAdminQuickAccess = true,
@@ -50,6 +52,7 @@ export function ProfilePreferences({
 
   const [showAdminButton, setShowAdminButton] = useState(showAdminQuickAccess);
   const [assistantVisible, setAssistantVisible] = useState(assistantEnabled);
+  const [showDispatchHelp, setShowDispatchHelp] = useState(true);
   const [savingAdminButtonPref, setSavingAdminButtonPref] = useState(false);
   const [savingAssistantVisibility, setSavingAssistantVisibility] = useState(false);
 
@@ -131,6 +134,17 @@ export function ProfilePreferences({
   }, [loadConfig]);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DISPATCH_HELP_PREF_KEY);
+      if (stored === "false") {
+        setShowDispatchHelp(false);
+      }
+    } catch {
+      // Ignore local preference read failures.
+    }
+  }, []);
+
+  useEffect(() => {
     if (!activeConfig) return;
     void loadModels();
   }, [activeConfig, loadModels]);
@@ -190,6 +204,21 @@ export function ProfilePreferences({
       toast.error(error instanceof Error ? error.message : "Failed to update assistant visibility");
     } finally {
       setSavingAssistantVisibility(false);
+    }
+  }
+
+  function handleToggleDispatchHelp() {
+    const next = !showDispatchHelp;
+    setShowDispatchHelp(next);
+    try {
+      localStorage.setItem(DISPATCH_HELP_PREF_KEY, String(next));
+      window.dispatchEvent(
+        new CustomEvent("dispatch:preferences-changed", {
+          detail: { showDispatchHelp: next },
+        }),
+      );
+    } catch {
+      // Ignore local preference write failures.
     }
   }
 
@@ -326,6 +355,25 @@ export function ProfilePreferences({
             }`}
           >
             {assistantVisible ? "Enabled" : "Hidden"}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Dispatch Help Panel</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              Show or hide the Daily Dispatch help panel on the Dispatch page.
+            </p>
+          </div>
+          <button
+            onClick={handleToggleDispatchHelp}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
+              showDispatchHelp
+                ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300"
+                : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            }`}
+          >
+            {showDispatchHelp ? "Shown" : "Hidden"}
           </button>
         </div>
 

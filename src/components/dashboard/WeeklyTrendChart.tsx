@@ -2,15 +2,14 @@
 
 import { useMemo } from "react";
 import type { DailyPoint } from "@/lib/insights";
+import { formatDateKeyForDisplay } from "@/lib/datetime";
 
 type WeeklyTrendChartProps = {
   points: DailyPoint[];
 };
 
 function toWeekdayLabel(dateKey: string) {
-  const parsed = new Date(`${dateKey}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return dateKey;
-  return parsed.toLocaleDateString("en-US", { weekday: "short" });
+  return formatDateKeyForDisplay(dateKey, { weekday: "short" }, { locale: "en-US" });
 }
 
 export function WeeklyTrendChart({ points }: WeeklyTrendChartProps) {

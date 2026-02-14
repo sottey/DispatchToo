@@ -7,6 +7,7 @@ import {
   type Task,
   type TaskStatus,
 } from "@/lib/client";
+import { addDaysToDateKey, formatDateKeyForDisplay, todayDateKey } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import { DispatchHistoryOverlay } from "@/components/DispatchHistoryOverlay";
 import {
@@ -27,14 +28,11 @@ const STATUS_STYLES: Record<TaskStatus, { dot: string; label: string; ring: stri
 };
 
 const COMPLETE_DISMISS_MS = 420;
-
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
+const DISPATCH_HELP_PREF_KEY = "dispatch-show-help";
 
 export function DispatchPage() {
   const { toast } = useToast();
-  const [date, setDate] = useState(todayStr);
+  const [date, setDate] = useState(todayDateKey);
   const [dispatch, setDispatch] = useState<Dispatch | null>(null);
   const [linkedTasks, setLinkedTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -50,6 +48,7 @@ export function DispatchPage() {
   const [unfinalizing, setUnfinalizing] = useState(false);
   const [unfinalizeWarning, setUnfinalizeWarning] = useState<{ nextDate: string } | null>(null);
   const [completingIds, setCompletingIds] = useState<string[]>([]);
+  const [showDispatchHelp, setShowDispatchHelp] = useState(true);
   const completionTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const fetchDispatch = useCallback(async () => {
@@ -94,6 +93,27 @@ export function DispatchPage() {
   useEffect(() => {
     setTaskSearch("");
   }, [date]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DISPATCH_HELP_PREF_KEY);
+      if (stored === "false") {
+        setShowDispatchHelp(false);
+      }
+    } catch {
+      // Ignore local preference read failures.
+    }
+
+    function handleDispatchPrefChange(event: Event) {
+      const custom = event as CustomEvent<{ showDispatchHelp?: boolean }>;
+      if (typeof custom.detail?.showDispatchHelp === "boolean") {
+        setShowDispatchHelp(custom.detail.showDispatchHelp);
+      }
+    }
+
+    window.addEventListener("dispatch:preferences-changed", handleDispatchPrefChange);
+    return () => window.removeEventListener("dispatch:preferences-changed", handleDispatchPrefChange);
+  }, []);
 
   useEffect(
     () => () => {
@@ -243,9 +263,7 @@ export function DispatchPage() {
       setDispatch(result.dispatch);
       toast.success("Day completed!");
       if (result.nextDispatchId) {
-        const nextDate = new Date(date + "T00:00:00");
-        nextDate.setDate(nextDate.getDate() + 1);
-        setDate(nextDate.toISOString().split("T")[0]);
+        setDate(addDaysToDateKey(date, 1));
       } else {
         fetchDispatch();
       }
@@ -292,12 +310,10 @@ export function DispatchPage() {
   }
 
   function navigateDay(offset: number) {
-    const d = new Date(date + "T00:00:00");
-    d.setDate(d.getDate() + offset);
-    setDate(d.toISOString().split("T")[0]);
+    setDate(addDaysToDateKey(date, offset));
   }
 
-  const isToday = date === todayStr();
+  const isToday = date === todayDateKey();
 
   const linkedIds = new Set(linkedTasks.map((t) => t.id));
   const availableTasks = allTasks.filter(
@@ -363,7 +379,7 @@ export function DispatchPage() {
                 {isToday ? "Today's Dispatch" : "Dispatch"}
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+                {formatDateKeyForDisplay(date, {
                   weekday: "long",
                   year: "numeric",
                   month: "long",
@@ -380,7 +396,7 @@ export function DispatchPage() {
           </button>
           {!isToday && (
             <button
-              onClick={() => setDate(todayStr())}
+              onClick={() => setDate(todayDateKey())}
               className="rounded-lg bg-neutral-100 dark:bg-neutral-800 px-3 py-1 text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 dark:text-neutral-200 active:scale-95 transition-all"
             >
               Today
@@ -427,106 +443,68 @@ export function DispatchPage() {
         </div>
       )}
 
-      {/* Description */}
-      <section
-        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-blue-50 via-white to-emerald-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 shadow-sm overflow-hidden animate-fade-in-up"
-        style={{ animationDelay: "75ms" }}
-      >
-        <div className="p-5 md:p-6 grid gap-6 md:grid-cols-[1.2fr_1fr]">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-300">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/20">
-                <IconCalendar className="w-4 h-4" />
-              </span>
-              Daily Dispatch
+      {showDispatchHelp && (
+        <section
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-blue-50 via-white to-emerald-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 shadow-sm overflow-hidden animate-fade-in-up"
+          style={{ animationDelay: "75ms" }}
+        >
+          <div className="p-5 md:p-6 grid gap-6 md:grid-cols-[1.2fr_1fr]">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-300">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/20">
+                  <IconCalendar className="w-4 h-4" />
+                </span>
+                Daily Dispatch
+              </div>
+              <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+                A focused snapshot of your day
+              </h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                Dispatches combine the tasks you plan to tackle with a short daily summary,
+                giving you one place to plan, track, and close out the day.
+              </p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                Treat the summary as a planning note, personal journal, or quick gratitude and
+                reflection entry. Your saved summary is automatically retained in Notes history.
+              </p>
             </div>
-            <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
-              A focused snapshot of your day
-            </h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300">
-              Dispatches combine the tasks you plan to tackle with a short daily summary,
-              giving you one place to plan, track, and close out the day.
-            </p>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300">
-              Treat the summary as a planning note, personal journal, or quick gratitude and
-              reflection entry. Your saved summary is automatically retained in Notes history.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/80 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/60 p-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              How to use Dispatch
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                  <IconSearch className="w-4 h-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Search & link tasks</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Pick what matters today.</p>
+            <div className="rounded-xl border border-white/80 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/60 p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                How to use Dispatch
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                    <IconSearch className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Search & link tasks</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Pick what matters today.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                  <IconDocument className="w-4 h-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Write a quick summary</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Capture goals, gratitude, and reflections.</p>
+                <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                    <IconDocument className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Write a quick summary</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Capture goals, gratitude, and reflections.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">
-                  <IconCheckCircle className="w-4 h-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Complete the day</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Unfinished tasks roll forward.</p>
+                <div className="flex items-center gap-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 px-3 py-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300">
+                    <IconCheckCircle className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Complete the day</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Unfinished tasks roll forward.</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Summary */}
-      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-        <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/50">
-          <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Daily Summary</h2>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Planning note, journal entry, or gratitude reflection for {date}.
-          </p>
-        </div>
-        <div className="p-4 space-y-3">
-          {dispatch?.finalized ? (
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">
-              {dispatch.summary || "No summary written."}
-            </p>
-          ) : (
-            <>
-              <textarea
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                placeholder="Write your plan, journal notes, gratitude, or end-of-day reflection..."
-                rows={4}
-                className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none resize-none transition-colors"
-              />
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSaveSummary}
-                  disabled={saving}
-                  className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-1.5 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2"
-                >
-                  {saving && (
-                    <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spinner" />
-                  )}
-                  {saving ? "Saving..." : savedSummary ? "Saved!" : "Save Summary"}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Linked tasks */}
       <section className="animate-fade-in-up" style={{ animationDelay: "150ms" }}>
@@ -609,6 +587,63 @@ export function DispatchPage() {
         </div>
       </section>
 
+      {/* Summary */}
+      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+        <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/50">
+          <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Daily Summary</h2>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            Planning note, journal entry, or gratitude reflection for {date}.
+          </p>
+        </div>
+        <div className="p-4 space-y-3">
+          {dispatch?.finalized ? (
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">
+              {dispatch.summary || "No summary written."}
+            </p>
+          ) : (
+            <>
+              <textarea
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="Write your plan, journal notes, gratitude, or end-of-day reflection..."
+                rows={4}
+                className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none resize-none transition-colors"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveSummary}
+                  disabled={saving}
+                  className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-1.5 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2"
+                >
+                  {saving && (
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spinner" />
+                  )}
+                  {saving ? "Saving..." : savedSummary ? "Saved!" : "Save Summary"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Complete day button */}
+      {dispatch && !dispatch.finalized && (
+        <div className="flex justify-end pt-2 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
+          <button
+            onClick={handleCompleteClick}
+            disabled={completing}
+            className="rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2 shadow-sm"
+          >
+            {completing ? (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spinner" />
+            ) : (
+              <IconCheck className="w-4 h-4" />
+            )}
+            {completing ? "Completing..." : confirmComplete ? "Confirm Complete" : "Complete Day"}
+          </button>
+        </div>
+      )}
+
       {/* Add task picker */}
       {!dispatch?.finalized && availableTasks.length > 0 && (
         <section className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
@@ -678,24 +713,6 @@ export function DispatchPage() {
         </section>
       )}
 
-      {/* Complete day button */}
-      {dispatch && !dispatch.finalized && (
-        <div className="flex justify-end pt-2 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
-          <button
-            onClick={handleCompleteClick}
-            disabled={completing}
-            className="rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2 shadow-sm"
-          >
-            {completing ? (
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spinner" />
-            ) : (
-              <IconCheck className="w-4 h-4" />
-            )}
-            {completing ? "Completing..." : confirmComplete ? "Confirm Complete" : "Complete Day"}
-          </button>
-        </div>
-      )}
-
       {/* Unfinalize warning modal */}
       {unfinalizeWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -707,7 +724,7 @@ export function DispatchPage() {
             <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
               This dispatch rolled over unfinished tasks to{" "}
               <span className="font-medium text-neutral-900 dark:text-white">
-                {new Date(unfinalizeWarning.nextDate + "T00:00:00").toLocaleDateString("en-US", {
+                {formatDateKeyForDisplay(unfinalizeWarning.nextDate, {
                   month: "short",
                   day: "numeric",
                   year: "numeric",

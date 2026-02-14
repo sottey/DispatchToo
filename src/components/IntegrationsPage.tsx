@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api, type ApiKey } from "@/lib/client";
+import { formatTimestamp } from "@/lib/datetime";
 import { IconCode, IconCopy, IconKey, IconPlus, IconPuzzle, IconTrash } from "@/components/icons";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
@@ -376,8 +377,8 @@ export function IntegrationsPage() {
                     )}
                   </div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
-                    {key.lastUsedAt && ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                    Created {formatTimestamp(key.createdAt, { year: "numeric", month: "numeric", day: "numeric" })}
+                    {key.lastUsedAt && ` • Last used ${formatTimestamp(key.lastUsedAt, { year: "numeric", month: "numeric", day: "numeric" })}`}
                   </div>
                 </div>
                 <div className="ml-4 flex items-center gap-2">

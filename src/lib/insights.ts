@@ -1,4 +1,9 @@
 import type { Task } from "@/lib/client";
+import {
+  addDaysToDateKey,
+  formatDateKey,
+  formatDateKeyForDisplay,
+} from "@/lib/datetime";
 
 export type TaskForInsights = Pick<Task, "createdAt" | "updatedAt" | "status">;
 
@@ -10,21 +15,12 @@ export type DailyPoint = {
 };
 
 export function toLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatDateKey(date);
 }
 
 export function normalizeIsoDate(iso: string): Date | null {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
 }
 
 export function buildDailyPoints(
@@ -34,20 +30,17 @@ export function buildDailyPoints(
 ): DailyPoint[] {
   if (rangeDays <= 0) return [];
 
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const startDate = addDays(today, -(rangeDays - 1));
+  const todayKey = toLocalDateKey(now);
+  const startKey = addDaysToDateKey(todayKey, -(rangeDays - 1));
   const keys: string[] = [];
   const labels = new Map<string, string>();
 
   for (let i = 0; i < rangeDays; i += 1) {
-    const current = addDays(startDate, i);
-    const key = toLocalDateKey(current);
+    const key = addDaysToDateKey(startKey, i);
     keys.push(key);
     labels.set(
       key,
-      current.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      formatDateKeyForDisplay(key, { month: "short", day: "numeric" }, { locale: "en-US" }),
     );
   }
 

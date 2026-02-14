@@ -1,6 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { dispatches } from "@/db/schema";
+import { addDaysToDateKey } from "@/lib/datetime";
 import { eq, and } from "drizzle-orm";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -28,9 +29,7 @@ export const POST = withAuth(async (req, session, ctx) => {
   }
 
   // Calculate next day's date (same logic as complete endpoint)
-  const currentDate = new Date(dispatch.date + "T00:00:00");
-  currentDate.setDate(currentDate.getDate() + 1);
-  const nextDate = currentDate.toISOString().split("T")[0];
+  const nextDate = addDaysToDateKey(dispatch.date, 1);
 
   // Check if next day's dispatch exists
   const [nextDispatch] = await db

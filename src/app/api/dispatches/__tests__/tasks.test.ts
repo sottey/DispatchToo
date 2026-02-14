@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockSession } from "@/test/setup";
 import { createTestDb } from "@/test/db";
-import { users } from "@/db/schema";
+import { notes, users } from "@/db/schema";
 
 let testDb: ReturnType<typeof createTestDb>;
 
@@ -335,6 +335,51 @@ describe("Complete Day", () => {
     expect(
       nextTaskData.map((t: { title: string }) => t.title).sort()
     ).toEqual(["In progress", "Open task"]);
+  });
+
+  it("applies dispatch template when rollover creates the next day", async () => {
+    testDb.db
+      .insert(notes)
+      .values({
+        id: "note-template-rollover",
+        userId: TEST_USER.id,
+        title: "TasklistTemplate",
+        content: [
+          "{{if:day=mon}}",
+          "- [ ] Monday kickoff >{{date:YYYY-MM-DD}}",
+          "{{endif}}",
+        ].join("\n"),
+      })
+      .run();
+
+    const dispatch = await createDispatch("2025-06-15"); // Sunday
+    const openTask = await createTask("Carry over");
+
+    await LINK_TASK(
+      jsonReq(`http://localhost/api/dispatches/${dispatch.id}/tasks`, "POST", {
+        taskId: openTask.id,
+      }),
+      ctx(dispatch.id),
+    );
+
+    const res = await COMPLETE_DAY(
+      jsonReq(`http://localhost/api/dispatches/${dispatch.id}/complete`, "POST", {}),
+      ctx(dispatch.id),
+    );
+    const data = await res.json();
+
+    const nextTasks = await GET_DISPATCH_TASKS(
+      new Request(`http://localhost/api/dispatches/${data.nextDispatchId}/tasks`),
+      ctx(data.nextDispatchId),
+    );
+    const nextTaskData = await nextTasks.json();
+    expect(nextTaskData.map((t: { title: string }) => t.title).sort()).toEqual([
+      "Carry over",
+      "Monday kickoff",
+    ]);
+
+    const kickoff = nextTaskData.find((t: { title: string }) => t.title === "Monday kickoff");
+    expect(kickoff.dueDate).toBe("2025-06-16");
   });
 
   it("creates next day dispatch with correct date", async () => {

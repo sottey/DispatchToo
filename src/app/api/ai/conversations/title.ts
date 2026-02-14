@@ -1,11 +1,13 @@
+import { formatTimestamp } from "@/lib/datetime";
+
 export function defaultConversationTitle(date = new Date()): string {
-  const stamp = date.toLocaleString("en-US", {
+  const stamp = formatTimestamp(date, {
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }, { locale: "en-US" });
   return `Conversation - ${stamp}`;
 }
 

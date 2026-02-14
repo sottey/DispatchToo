@@ -57,3 +57,4 @@ next-env.d.ts
 *.swp
 *.swo
 dev.log
+docker-compose.local

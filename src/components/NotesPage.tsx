@@ -3,9 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, type Note } from "@/lib/client";
+import { formatTimestamp } from "@/lib/datetime";
 import { Pagination } from "@/components/Pagination";
 import { useToast } from "@/components/ToastProvider";
 import { IconDocument, IconGrid, IconList, IconPlus, IconTrash } from "@/components/icons";
+
+function formatShortDate(value: string) {
+  return formatTimestamp(value, { year: "numeric", month: "numeric", day: "numeric" });
+}
 
 export function NotesPage() {
   const router = useRouter();
@@ -299,7 +304,7 @@ function NoteRow({
         )}
       </div>
       <span className="text-xs text-neutral-300 dark:text-neutral-600 whitespace-nowrap">
-        {new Date(note.updatedAt).toLocaleDateString()}
+        {formatShortDate(note.updatedAt)}
       </span>
       <div data-note-delete className="min-w-[72px] flex justify-end">
         {confirmDelete ? (
@@ -383,7 +388,7 @@ function NoteCard({
         <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 line-clamp-3">{note.content}</p>
       )}
       <p className="text-xs text-neutral-300 dark:text-neutral-600 mt-3">
-        {new Date(note.updatedAt).toLocaleDateString()}
+        {formatShortDate(note.updatedAt)}
       </p>
     </div>
   );

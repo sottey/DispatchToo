@@ -2,16 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/client";
+import { formatDateKeyForDisplay, todayDateKey } from "@/lib/datetime";
 import { IconCheck, IconChevronLeft } from "@/components/icons";
 
 interface DispatchHistoryOverlayProps {
   currentDate: string;
   onClose: () => void;
   onDateSelect: (date: string) => void;
-}
-
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
 }
 
 export function DispatchHistoryOverlay({
@@ -66,9 +63,9 @@ export function DispatchHistoryOverlay({
   }
 
   function goToToday() {
-    const today = new Date();
-    setYear(today.getFullYear());
-    setMonth(today.getMonth() + 1);
+    const [y, m] = todayDateKey().split("-").map((part) => Number.parseInt(part, 10));
+    setYear(y);
+    setMonth(m);
   }
 
   // Generate calendar grid
@@ -87,8 +84,12 @@ export function DispatchHistoryOverlay({
     calendarDays.push(day);
   }
 
-  const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long" });
-  const today = todayStr();
+  const monthName = formatDateKeyForDisplay(
+    `${year}-${String(month).padStart(2, "0")}-01`,
+    { month: "long" },
+    { locale: "en-US" },
+  );
+  const today = todayDateKey();
 
   function handleDateClick(day: number) {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;

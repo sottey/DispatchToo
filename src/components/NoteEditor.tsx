@@ -11,6 +11,7 @@ import type {
 import { useRouter } from "next/navigation";
 import Markdown from "react-markdown";
 import { api, type Note } from "@/lib/client";
+import { formatTimestamp } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import {
   IconCalendar,
@@ -493,11 +494,11 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
                 <span className="inline-flex items-center gap-1.5">
                   <IconCalendar className="w-3.5 h-3.5" />
-                  {createdAt ? createdAt.toLocaleDateString() : "Unknown date"}
+                  {createdAt ? formatTimestamp(createdAt, { year: "numeric", month: "numeric", day: "numeric" }) : "Unknown date"}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <IconClock className="w-3.5 h-3.5" />
-                  {updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "No updates yet"}
+                  {updatedAt ? `Updated ${formatTimestamp(updatedAt, { hour: "2-digit", minute: "2-digit" })}` : "No updates yet"}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <IconPencil className="w-3.5 h-3.5" />
@@ -575,11 +576,11 @@ export function NoteEditor({ noteId }: { noteId: string }) {
             <div className="mt-3 space-y-2 text-sm text-neutral-600 dark:text-neutral-300">
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400 dark:text-neutral-500">Created</span>
-                <span>{createdAt ? createdAt.toLocaleDateString() : "—"}</span>
+                <span>{createdAt ? formatTimestamp(createdAt, { year: "numeric", month: "numeric", day: "numeric" }) : "—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400 dark:text-neutral-500">Updated</span>
-                <span>{updatedAt ? updatedAt.toLocaleDateString() : "—"}</span>
+                <span>{updatedAt ? formatTimestamp(updatedAt, { year: "numeric", month: "numeric", day: "numeric" }) : "—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400 dark:text-neutral-500">Mode</span>

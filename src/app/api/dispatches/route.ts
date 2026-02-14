@@ -2,6 +2,7 @@ import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
 import { dispatches } from "@/db/schema";
+import { getOrCreateDispatchForDate } from "@/lib/dispatch-template";
 import { eq, and, sql } from "drizzle-orm";
 
 /** GET /api/dispatches — list dispatches for the current user */
@@ -73,18 +74,16 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("A dispatch already exists for this date", 409);
   }
 
-  const now = new Date().toISOString();
+  const { dispatch } = await getOrCreateDispatchForDate(session.user!.id!, date);
 
-  const [dispatch] = await db
-    .insert(dispatches)
-    .values({
-      userId: session.user!.id!,
-      date,
-      summary: summary as string | undefined,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  if (summary !== undefined) {
+    const [updated] = await db
+      .update(dispatches)
+      .set({ summary: summary as string, updatedAt: new Date().toISOString() })
+      .where(eq(dispatches.id, dispatch.id))
+      .returning();
+    return jsonResponse(updated ?? dispatch, 201);
+  }
 
   return jsonResponse(dispatch, 201);
 });

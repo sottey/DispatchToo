@@ -1,7 +1,9 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { dispatches, dispatchTasks, tasks } from "@/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { getOrCreateDispatchForDate } from "@/lib/dispatch-template";
+import { addDaysToDateKey } from "@/lib/datetime";
+import { eq, and } from "drizzle-orm";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,9 +43,7 @@ export const POST = withAuth(async (req, session, ctx) => {
   const unfinished = linkedTasks.filter((t) => t.status !== "done");
 
   // Calculate next day
-  const currentDate = new Date(dispatch.date + "T00:00:00");
-  currentDate.setDate(currentDate.getDate() + 1);
-  const nextDate = currentDate.toISOString().split("T")[0];
+  const nextDate = addDaysToDateKey(dispatch.date, 1);
 
   const now = new Date().toISOString();
 
@@ -57,26 +57,8 @@ export const POST = withAuth(async (req, session, ctx) => {
   // Roll unfinished tasks to next day if any
   let nextDispatch = null;
   if (unfinished.length > 0) {
-    // Find or create next day's dispatch
-    const [existing] = await db
-      .select()
-      .from(dispatches)
-      .where(and(eq(dispatches.userId, userId), eq(dispatches.date, nextDate)));
-
-    if (existing) {
-      nextDispatch = existing;
-    } else {
-      const [created] = await db
-        .insert(dispatches)
-        .values({
-          userId,
-          date: nextDate,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
-      nextDispatch = created;
-    }
+    const { dispatch: next } = await getOrCreateDispatchForDate(userId, nextDate);
+    nextDispatch = next;
 
     // Link unfinished tasks to the next dispatch (skip if already linked)
     for (const task of unfinished) {

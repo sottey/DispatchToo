@@ -1,6 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { dispatches, dispatchTasks } from "@/db/schema";
+import { endOfMonthDateKey } from "@/lib/datetime";
 import { eq, and, gte, lte, inArray, sql } from "drizzle-orm";
 
 /**
@@ -24,11 +25,8 @@ export const GET = withAuth(async (req, session) => {
     return errorResponse("Invalid year or month", 400);
   }
 
-  // Calculate date range for the month
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); // Last day of month
-  const startDateStr = startDate.toISOString().split("T")[0];
-  const endDateStr = endDate.toISOString().split("T")[0];
+  const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDateStr = endOfMonthDateKey(year, month);
 
   // Fetch dispatches for the month
   const monthDispatches = await db

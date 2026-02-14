@@ -9,6 +9,7 @@ import {
   type Task,
   type TaskStatus,
 } from "@/lib/client";
+import { addDaysToDateKey, formatTimestamp, todayDateKey } from "@/lib/datetime";
 import { buildDailyPoints } from "@/lib/insights";
 import { useDashboardLayout, type DashboardWidgetId } from "@/lib/dashboard-layout";
 import { PROJECT_COLORS } from "@/lib/projects";
@@ -125,11 +126,9 @@ export function Dashboard({ userName }: { userName: string }) {
   const doneTasks = tasks.filter((task) => task.status === "done");
   const activeTasks = tasks.filter((task) => task.status !== "done");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayDateKey();
   const focusWindowDays = 7;
-  const focusEnd = new Date();
-  focusEnd.setDate(focusEnd.getDate() + focusWindowDays);
-  const focusEndIso = focusEnd.toISOString().split("T")[0];
+  const focusEndIso = addDaysToDateKey(today, focusWindowDays);
 
   const overdue = tasks.filter(
     (task) => task.dueDate && task.dueDate < today && task.status !== "done",
@@ -534,7 +533,15 @@ function DashboardWidget({
                         {item.status.replace("_", " ")}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">{new Date(item.updatedAt).toLocaleString()}</p>
+                    <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {formatTimestamp(item.updatedAt, {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -621,7 +628,13 @@ function ActivityCard({
                       <span className="font-medium">{label}:</span> {item.title}
                     </p>
                     <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
-                      {new Date(item.date).toLocaleString()}
+                      {formatTimestamp(item.date, {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
                 </div>
