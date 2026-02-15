@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -k -n NEXT,MCP -c cyan,magenta \"npm run next:dev\" \"npm run mcp:dev\"",
-    "next:dev": "next dev",
+    "next:dev": "next dev -p 8082",
     "mcp:dev": "tsx watch src/mcp-server/index.ts",
     "mcp:start": "tsx src/mcp-server/index.ts",
     "build": "next build",
