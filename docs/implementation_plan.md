@@ -60,6 +60,7 @@ The signature feature: a daily "dispatch" view that aggregates what's relevant f
 - [x] **4.6** Allow linking/unlinking tasks to a dispatch via `dispatch_tasks` join table and `/api/dispatches/[id]/tasks` endpoint.
 - [x] **4.7** Add a "complete day" action (`/api/dispatches/[id]/complete`) that marks the dispatch as finalized and rolls unfinished tasks to the next day.
 - [x] **4.8** Write tests for dispatch-specific logic: task linking, day completion, task rollover — 18 tests.
+- [x] **4.9** Add dispatch template-driven recurring tasks: parse `TasklistTemplate` note rules and auto-create matching tasks when a dispatch is created (including rollover-created next-day dispatches).
 
 ## Phase 5: Polish, Search & Quality of Life
 

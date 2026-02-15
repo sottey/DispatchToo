@@ -35,10 +35,58 @@
 - `Projects`: progress rollups and scoped task lists.
 - `Notes`: markdown editing, preview, and export.
 - `Dispatch`: daily planning surface with rollover support.
+- `Dispatch Templates`: recurring task generation using a `TasklistTemplate` note and date conditions.
 - `Personal Assistant (Beta)`: streaming AI chat powered by Vercel AI SDK, with in-app actions via a local MCP (Model Context Protocol) tool server.
 - `Search`: global search across tasks, notes, and dispatch records.
 - `Recycle Bin`: restore or permanently remove archived items.
 - `Auth`: GitHub OAuth and local development credentials.
+
+## Recurring Tasks via Dispatch Templates
+
+Dispatch supports template-driven recurring tasks. This is active now.
+
+How it works:
+
+1. Create a note titled `TasklistTemplate`.
+2. Add unchecked markdown task lines (`- [ ] ...`) and optional conditions.
+3. When a dispatch is created for a date, matching template tasks are created and linked to that dispatch.
+
+When template tasks are applied:
+
+- Creating a dispatch for a date (`POST /api/dispatches`).
+- Dispatch page auto-creating the day when you open `/dispatch` and none exists yet.
+- Completing a day when rollover creates the next day (`POST /api/dispatches/{id}/complete`).
+
+Template syntax:
+
+```md
+{{if:day=mon}}
+- [ ] Weekly planning >{{date:YYYY-MM-DD}}
+{{endif}}
+
+{{if:day=weekday}}
+- [ ] Inbox zero pass
+{{endif}}
+
+{{if:month=jan&dom=15}}
+- [ ] Mid-month finance check
+{{endif}}
+
+{{if:day=tue}}- [ ] Take out bins >{{date:YYYY-MM-DD}}
+```
+
+Condition keys:
+
+- `day=`: `sun,mon,tue,wed,thu,fri,sat`, plus `weekday` and `weekend`. Comma lists are supported (`day=sat,wed`).
+- `dom=`: day-of-month values (`dom=1,15,31`).
+- `month=`: month names (`jan`..`dec`, comma lists supported).
+- Use `&` to combine clauses (`month=jun&dom=14`).
+
+Task line behavior:
+
+- `- [ ] Task title` creates an open, medium-priority task.
+- `{{date:...}}` placeholders render from dispatch date (supports `YYYY`, `MM`, `DD`).
+- A trailing `>YYYY-MM-DD` sets `dueDate` (must be at the end of the task line).
 
 ## Tech Stack
 

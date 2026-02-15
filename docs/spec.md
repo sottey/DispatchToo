@@ -95,6 +95,28 @@ Dispatch is a personal, locally-hosted web application for managing tasks, notes
 | Auth        | `/api/auth/[...nextauth]` | --                       | NextAuth.js catch-all                                     |
 | Register    | `/api/auth/register`   | --                          | POST email/password registration                          |
 
+### Dispatch Templates (Recurring Task Rules)
+
+- Dispatch supports template-driven recurring task creation via a note titled `TasklistTemplate`.
+- When a dispatch is newly created (direct create or rollover-created next day), template lines that match the dispatch date are turned into tasks and linked through `dispatch_task`.
+- Parsing and application logic lives in `src/lib/dispatch-template.ts`.
+- Supported condition syntax:
+  - Block form:
+    - `{{if:...}}`
+    - task lines
+    - `{{endif}}`
+  - Inline form:
+    - `{{if:...}}- [ ] Task text`
+- Supported clauses:
+  - `day=` with `sun..sat`, `weekday`, `weekend`, and comma lists
+  - `dom=` with day-of-month numbers (comma lists)
+  - `month=` with month tokens `jan..dec` (comma lists)
+  - Combine clauses with `&` (example: `month=jun&dom=14`)
+- Supported task line features:
+  - Markdown checkbox format `- [ ] ...`
+  - Date placeholder rendering: `{{date:YYYY-MM-DD}}` (`YYYY`, `MM`, `DD`)
+  - Trailing due-date suffix: `>YYYY-MM-DD` (sets `task.dueDate`)
+
 ## Personal Assistant (Beta) + MCP
 
 - Personal Assistant is available at `/assistant` with streaming chat (`/api/ai/chat`) and conversation history (`/api/ai/conversations`).
@@ -156,6 +178,7 @@ src/
   lib/
     api.ts                          # withAuth, withAdminAuth, getApiKeyFromRequest, resolveApiKeySession, jsonResponse, errorResponse
     client.ts                       # Typed API client with all resource methods + type exports
+    dispatch-template.ts            # TasklistTemplate parsing + template task generation on dispatch creation
     ai.ts                           # AI config/model/provider helpers + model factory
     ai-encryption.ts                # AES-GCM API key encryption helpers
     projects.ts                     # PROJECT_COLORS config, PROJECT_COLOR_OPTIONS, PROJECT_STATUS_OPTIONS
