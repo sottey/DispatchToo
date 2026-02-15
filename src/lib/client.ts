@@ -212,10 +212,16 @@ export class ApiError extends Error {
 // ---- Fetch wrapper ----
 
 export const TASKS_CHANGED_EVENT = "tasks:changed";
+export const PROJECTS_CHANGED_EVENT = "projects:changed";
 
 function emitTasksChanged(detail: { action: "create" | "update" | "delete"; taskId?: string }) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail }));
+}
+
+function emitProjectsChanged(detail: { action: "create" | "update" | "delete"; projectId?: string }) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PROJECTS_CHANGED_EVENT, { detail }));
 }
 
 function sleep(ms: number): Promise<void> {
@@ -361,13 +367,22 @@ export const api = {
     get: (id: string) => request<Project>(`/projects/${id}`),
 
     create: (data: { name: string; description?: string; status?: ProjectStatus; color?: string }) =>
-      request<Project>("/projects", { method: "POST", body: JSON.stringify(data) }),
+      request<Project>("/projects", { method: "POST", body: JSON.stringify(data) }).then((project) => {
+        emitProjectsChanged({ action: "create", projectId: project.id });
+        return project;
+      }),
 
     update: (id: string, data: { name?: string; description?: string; status?: ProjectStatus; color?: string }) =>
-      request<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      request<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }).then((project) => {
+        emitProjectsChanged({ action: "update", projectId: project.id });
+        return project;
+      }),
 
     delete: (id: string) =>
-      request<{ deleted: true }>(`/projects/${id}`, { method: "DELETE" }),
+      request<{ deleted: true }>(`/projects/${id}`, { method: "DELETE" }).then((result) => {
+        emitProjectsChanged({ action: "delete", projectId: id });
+        return result;
+      }),
 
     getTasks: (id: string, params?: { page?: number; limit?: number }) =>
       request<Task[] | PaginatedResponse<Task>>(`/projects/${id}/tasks${qs({

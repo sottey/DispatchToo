@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
-import { api, type ProjectWithStats } from "@/lib/client";
+import { api, PROJECTS_CHANGED_EVENT, type ProjectWithStats } from "@/lib/client";
 import { PROJECT_COLORS } from "@/lib/projects";
 import { BrandMark } from "@/components/BrandMark";
 import {
@@ -96,7 +96,11 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
       fetchProjects();
     }
     window.addEventListener("projects:refresh", handleRefresh);
-    return () => window.removeEventListener("projects:refresh", handleRefresh);
+    window.addEventListener(PROJECTS_CHANGED_EVENT, handleRefresh as EventListener);
+    return () => {
+      window.removeEventListener("projects:refresh", handleRefresh);
+      window.removeEventListener(PROJECTS_CHANGED_EVENT, handleRefresh as EventListener);
+    };
   }, [fetchProjects]);
 
   // Read collapsed state from localStorage on mount

@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 
+// SCOADD
+import * as crypto from 'node:crypto';
+
 type ToastVariant = "success" | "error" | "info" | "undo";
 
 interface Toast {
