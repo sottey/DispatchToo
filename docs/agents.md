@@ -4,7 +4,7 @@ Instructions for AI coding agents working on this repository.
 
 ## First Steps
 
-**Read `spec.md` before making any changes.** It contains the complete project specification including architecture, data model, every API endpoint, the full file structure, UI component inventory, and established patterns. This will save you from exploring the codebase from scratch.
+**Read `docs/spec.md` before making any changes.** It contains the complete project specification including architecture, data model, every API endpoint, the full file structure, UI component inventory, and established patterns. This will save you from exploring the codebase from scratch.
 
 ## Project Summary
 
@@ -29,7 +29,7 @@ npm run db:push      # Push schema to DB (dev shortcut)
 
 - **Pages**: `src/app/` — Server Components by default, `"use client"` for client components
 - **API Routes**: `src/app/api/` — REST handlers using `withAuth()` wrapper for auth
-- **Components**: `src/components/` — 24 components (see spec.md for full list)
+- **Components**: `src/components/` — 24 components (see `docs/spec.md` for full list)
 - **Database**: `src/db/schema.ts` (Drizzle tables), `src/db/index.ts` (client singleton)
 - **Auth**: `src/auth.ts` — NextAuth.js v5 config with GitHub OAuth + Credentials
 - **Utilities**: `src/lib/api.ts` (auth helpers), `src/lib/client.ts` (typed API client)
@@ -50,8 +50,8 @@ npm run db:push      # Push schema to DB (dev shortcut)
 
 | File | What It Does |
 |------|-------------|
-| `spec.md` | **Full project specification** — read this first |
-| `CLAUDE.md` | Claude Code-specific instructions |
+| `docs/spec.md` | **Full project specification** — read this first |
+| `docs/claude.md` | Claude Code-specific instructions |
 | `src/db/schema.ts` | All database table definitions |
 | `src/auth.ts` | Authentication configuration |
 | `src/lib/api.ts` | `withAuth`, `jsonResponse`, `errorResponse` helpers |

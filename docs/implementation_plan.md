@@ -186,7 +186,7 @@ Add a recycle bin that holds deleted tasks, notes, and projects for 30 days befo
 - [x] **11.6** Add `recycleBin` methods to the client API (`src/lib/client.ts`).
 - [x] **11.7** Build the Recycle Bin UI page (`/recycle-bin`) with type filter tabs, restore/delete-forever actions, and days-remaining indicator.
 - [x] **11.8** Add a Recycle Bin link (with trash icon) to the sidebar Workspace section below Notes.
-- [x] **11.9** Update `spec.md` to reflect the full current feature set including soft-delete, recycle bin, and all pages/endpoints.
+- [x] **11.9** Update `docs/spec.md` to reflect the full current feature set including soft-delete, recycle bin, and all pages/endpoints.
 
 ## Phase 12: UX Consistency, Insights & Responsive Experience
 
@@ -273,7 +273,7 @@ Incorporate a conversational AI assistant into Dispatch, powered by cloud LLM pr
 - [x] **14.22** Handle error states gracefully: provider not configured, invalid API key, local model server not running (connection refused), rate limits, and network timeouts. Show clear, actionable error messages inline in the chat.
 - [x] **14.23** Add loading/streaming animations consistent with the Dispatch design system — shimmer skeleton for initial load, animated dots or cursor for streaming responses.
 - [x] **14.24** Write integration tests for AI config CRUD, conversation CRUD, and the chat endpoint (mock the AI SDK's `streamText` to avoid real API calls in tests).
-- [x] **14.25** Update `spec.md` to document the Personal Assistant feature, new tables, new API endpoints, and new components. Bump the version to v0.3.0.
+- [x] **14.25** Update `docs/spec.md` to document the Personal Assistant feature, new tables, new API endpoints, and new components. Bump the version to v0.3.0.
 
 ### 14G — MCP Server (Model Context Protocol) for Tool Use
 
@@ -365,7 +365,7 @@ Systematically simplify the codebase, remove unused tooling/dependencies, and re
 - [ ] **16.9** Prune dead code and stale assets: unused components, helpers, styles, scripts, and docs sections that no longer reflect current behavior.
 - [ ] **16.10** Simplify developer tooling/scripts (build, test, db, dev) to reduce overlap and keep one clear path per workflow.
 - [ ] **16.11** Re-verify app integrity end-to-end after cleanup: auth flows, core CRUD, assistant/MCP paths, migrations, and responsive UI behavior.
-- [ ] **16.12** Final validation gate: `npm run build`, `npm test`, and zero known high/critical vulnerabilities; update `spec.md` and release notes/version to capture cleanup outcomes.
+- [ ] **16.12** Final validation gate: `npm run build`, `npm test`, and zero known high/critical vulnerabilities; update `docs/spec.md` and release notes/version to capture cleanup outcomes.
 - [ ] **16.13** Audit repository exposure boundaries for GitHub and Docker: identify sensitive/personal local files (keys, env files, notes, exports, IDE/system artifacts) that must never be committed or copied into images.
 - [ ] **16.14** Review and update `.gitignore` and `.dockerignore` to enforce those boundaries, including env/secrets, local DB files, logs, caches, temp files, OS artifacts, and personal workspace files.
 - [ ] **16.15** Validate ignore behavior with dry-run checks (`git status`, Docker build context inspection) to confirm protected files are excluded before any push/build.

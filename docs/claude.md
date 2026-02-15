@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Always read `spec.md` first.** It contains the full project specification: architecture, data model, API endpoints, file structure, UI patterns, and component inventory. Consult it before making changes to understand how things fit together.
+**Always read `docs/spec.md` first.** It contains the full project specification: architecture, data model, API endpoints, file structure, UI patterns, and component inventory. Consult it before making changes to understand how things fit together.
 
 ## Environment
 
@@ -35,7 +35,7 @@ npm run test:watch   # Run tests in watch mode
 - **REST API routes** (`src/app/api/`) — Next.js Route Handlers. Each route exports HTTP verb functions (`GET`, `POST`, `PUT`, `DELETE`). Protected routes use the `withAuth` wrapper from `src/lib/api.ts`.
 - **Auth** (`src/auth.ts`) — NextAuth.js v5 config. GitHub OAuth (conditional on env vars) + Credentials (email/password with bcryptjs). JWT session strategy. Route handler at `src/app/api/auth/[...nextauth]/route.ts`.
 - **Database** (`src/db/`) — Drizzle ORM with better-sqlite3. Schema defined in `src/db/schema.ts`, client exported from `src/db/index.ts`. SQLite file is `dispatch.db` at project root (gitignored).
-- **Shared UI** (`src/components/`) — 24 reusable React components. See `spec.md` for the full inventory.
+- **Shared UI** (`src/components/`) — 24 reusable React components. See `docs/spec.md` for the full inventory.
 - **Utilities** (`src/lib/`) — `api.ts` (withAuth, jsonResponse, errorResponse), `client.ts` (typed API client), `projects.ts` (color config), `pagination.ts` (pagination helpers).
 - **Drizzle migrations** (`drizzle/`) — Generated migration SQL files. Config in `drizzle.config.ts`.
 - **Tests** (`src/**/__tests__/`) — Vitest tests colocated with source. Test helpers in `src/test/` provide an in-memory SQLite database factory and auth mock. Config in `vitest.config.ts`.
