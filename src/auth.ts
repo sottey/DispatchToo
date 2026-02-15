@@ -36,7 +36,7 @@ function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
 
 async function getUserAccess(
   userId: string,
-): Promise<{ role: UserRole; isFrozen: boolean; showAdminQuickAccess: boolean; assistantEnabled: boolean }> {
+): Promise<{ role: UserRole; isFrozen: boolean; showAdminQuickAccess: boolean; assistantEnabled: boolean } | null> {
   ensureAuthDatabaseReady();
   const [dbUser] = await db
     .select({
@@ -49,11 +49,15 @@ async function getUserAccess(
     .where(eq(users.id, userId))
     .limit(1);
 
+  if (!dbUser) {
+    return null;
+  }
+
   return {
-    role: (dbUser?.role as UserRole | undefined) ?? "member",
-    isFrozen: Boolean(dbUser?.frozenAt),
-    showAdminQuickAccess: dbUser?.showAdminQuickAccess ?? true,
-    assistantEnabled: dbUser?.assistantEnabled ?? true,
+    role: (dbUser.role as UserRole | undefined) ?? "member",
+    isFrozen: Boolean(dbUser.frozenAt),
+    showAdminQuickAccess: dbUser.showAdminQuickAccess ?? true,
+    assistantEnabled: dbUser.assistantEnabled ?? true,
   };
 }
 
@@ -181,6 +185,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.sub) {
         try {
           const access = await getUserAccess(token.sub);
+          if (!access) {
+            // User no longer exists in the database (e.g., account deleted).
+            // Clear identity claims so subsequent requests are treated as unauthenticated.
+            delete token.sub;
+            delete token.role;
+            delete token.isFrozen;
+            delete token.showAdminQuickAccess;
+            delete token.assistantEnabled;
+            return token;
+          }
           token.role = access.role;
           token.isFrozen = access.isFrozen;
           token.showAdminQuickAccess = access.showAdminQuickAccess;

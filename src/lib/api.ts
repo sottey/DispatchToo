@@ -83,7 +83,7 @@ export function withAuth<TCtx = unknown>(
     const { allowApiKey = true } = options;
 
     const session = await auth();
-    if (session?.user) {
+    if (session?.user?.id) {
       session.user.role = session.user.role ?? "member";
       session.user.isFrozen = Boolean(session.user.isFrozen);
       session.user.showAdminQuickAccess = session.user.showAdminQuickAccess ?? true;

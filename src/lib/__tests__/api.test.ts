@@ -53,6 +53,21 @@ describe("withAuth", () => {
     expect(await res.json()).toEqual({ userId: "user-1" });
   });
 
+  it("returns 401 when session exists without a user id", async () => {
+    mockSession({
+      user: {
+        id: "",
+        name: "Test",
+        email: "test@test.com",
+      },
+    });
+    const handler = withAuth(async () => jsonResponse({ ok: true }));
+    const req = new Request("http://localhost/api/test");
+    const res = await handler(req, {});
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Unauthorized" });
+  });
+
   it("passes route context through to the handler", async () => {
     mockSession({ user: { id: "user-1", name: "Test", email: "test@test.com" } });
     const mockCtx = { params: Promise.resolve({ id: "abc" }) };
