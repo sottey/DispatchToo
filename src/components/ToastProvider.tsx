@@ -25,11 +25,27 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+function createToastId(): string {
+  const webCrypto = globalThis.crypto;
+  if (webCrypto?.randomUUID) {
+    return webCrypto.randomUUID();
+  }
+
+  if (webCrypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    webCrypto.getRandomValues(bytes);
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `toast-${hex}`;
+  }
+
+  return `toast-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((message: string, variant: ToastVariant, onUndo?: () => void) => {
-    const id = crypto.randomUUID();
+    const id = createToastId();
     setToasts((prev) => [...prev, { id, message, variant, onUndo }]);
   }, []);
 
