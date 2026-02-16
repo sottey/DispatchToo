@@ -448,19 +448,6 @@ export function ProfilePreferences({
           </button>
         </div>
 
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
-          <CustomSelect
-            label="Default Start Node"
-            value={selectedStartNode}
-            onChange={handleDefaultStartNodeChange}
-            options={DEFAULT_START_NODE_OPTIONS}
-            disabled={savingDefaultStartNode}
-          />
-          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
-            Selected node opens by default when launching the app.
-          </p>
-        </div>
-
         {isAdmin && (
           <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
             <div>
@@ -482,6 +469,19 @@ export function ProfilePreferences({
             </button>
           </div>
         )}
+
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <CustomSelect
+            label="Default Start Node"
+            value={selectedStartNode}
+            onChange={handleDefaultStartNodeChange}
+            options={DEFAULT_START_NODE_OPTIONS}
+            disabled={savingDefaultStartNode}
+          />
+          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+            Selected node opens by default when launching the app.
+          </p>
+        </div>
       </div>
 
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-4">
