@@ -40,6 +40,7 @@ export default async function Profile() {
         showAdminQuickAccess: users.showAdminQuickAccess,
         assistantEnabled: users.assistantEnabled,
         tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+        defaultStartNode: users.defaultStartNode,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -52,6 +53,7 @@ export default async function Profile() {
   const showAdminQuickAccess = currentUserRecord?.showAdminQuickAccess ?? true;
   const assistantEnabled = currentUserRecord?.assistantEnabled ?? true;
   const tasksTodayFocusDefault = currentUserRecord?.tasksTodayFocusDefault ?? false;
+  const defaultStartNode = currentUserRecord?.defaultStartNode ?? "dashboard";
 
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6 animate-fade-in-up">
@@ -118,6 +120,7 @@ export default async function Profile() {
         showAdminQuickAccess={showAdminQuickAccess}
         assistantEnabled={assistantEnabled}
         tasksTodayFocusDefault={tasksTodayFocusDefault}
+        defaultStartNode={defaultStartNode}
       />
 
       {isAdmin && (

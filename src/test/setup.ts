@@ -10,6 +10,8 @@ type MockSession = {
     isFrozen?: boolean;
     showAdminQuickAccess?: boolean;
     assistantEnabled?: boolean;
+    tasksTodayFocusDefault?: boolean;
+    defaultStartNode?: "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
   };
 } | null;
 

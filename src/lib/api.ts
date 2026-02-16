@@ -42,6 +42,8 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       frozenAt: users.frozenAt,
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
+      tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      defaultStartNode: users.defaultStartNode,
     })
     .from(apiKeys)
     .innerJoin(users, eq(apiKeys.userId, users.id))
@@ -65,6 +67,18 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       isFrozen: Boolean(result.frozenAt),
       showAdminQuickAccess: result.showAdminQuickAccess ?? true,
       assistantEnabled: result.assistantEnabled ?? true,
+      tasksTodayFocusDefault: result.tasksTodayFocusDefault ?? false,
+      defaultStartNode:
+        (result.defaultStartNode as
+          | "dashboard"
+          | "dispatch"
+          | "inbox"
+          | "tasks"
+          | "notes"
+          | "insights"
+          | "projects"
+          | null
+          | undefined) ?? "dashboard",
     },
     expires: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
   };
@@ -88,6 +102,8 @@ export function withAuth<TCtx = unknown>(
       session.user.isFrozen = Boolean(session.user.isFrozen);
       session.user.showAdminQuickAccess = session.user.showAdminQuickAccess ?? true;
       session.user.assistantEnabled = session.user.assistantEnabled ?? true;
+      session.user.tasksTodayFocusDefault = session.user.tasksTodayFocusDefault ?? false;
+      session.user.defaultStartNode = session.user.defaultStartNode ?? "dashboard";
       if (session.user.isFrozen) {
         return errorResponse("Account is frozen", 403);
       }
@@ -101,6 +117,8 @@ export function withAuth<TCtx = unknown>(
         apiKeySession.user.isFrozen = Boolean(apiKeySession.user.isFrozen);
         apiKeySession.user.showAdminQuickAccess = apiKeySession.user.showAdminQuickAccess ?? true;
         apiKeySession.user.assistantEnabled = apiKeySession.user.assistantEnabled ?? true;
+        apiKeySession.user.tasksTodayFocusDefault = apiKeySession.user.tasksTodayFocusDefault ?? false;
+        apiKeySession.user.defaultStartNode = apiKeySession.user.defaultStartNode ?? "dashboard";
         if (apiKeySession.user.isFrozen) {
           return errorResponse("Account is frozen", 403);
         }

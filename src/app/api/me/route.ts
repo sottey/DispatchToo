@@ -8,6 +8,16 @@ export const GET = withAuth(async (_req, session) => {
 }, { allowApiKey: false });
 
 export const PUT = withAuth(async (req, session) => {
+  const VALID_DEFAULT_START_NODES = new Set([
+    "dashboard",
+    "dispatch",
+    "inbox",
+    "tasks",
+    "notes",
+    "insights",
+    "projects",
+  ]);
+
   let body: unknown;
   try {
     body = await req.json();
@@ -15,7 +25,7 @@ export const PUT = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { showAdminQuickAccess, assistantEnabled, tasksTodayFocusDefault } = body as Record<string, unknown>;
+  const { showAdminQuickAccess, assistantEnabled, tasksTodayFocusDefault, defaultStartNode } = body as Record<string, unknown>;
 
   if (showAdminQuickAccess !== undefined && typeof showAdminQuickAccess !== "boolean") {
     return errorResponse("showAdminQuickAccess must be a boolean", 400);
@@ -30,9 +40,20 @@ export const PUT = withAuth(async (req, session) => {
   }
 
   if (
+    defaultStartNode !== undefined &&
+    (typeof defaultStartNode !== "string" || !VALID_DEFAULT_START_NODES.has(defaultStartNode))
+  ) {
+    return errorResponse(
+      "defaultStartNode must be one of: dashboard, dispatch, inbox, tasks, notes, insights, projects",
+      400,
+    );
+  }
+
+  if (
     showAdminQuickAccess === undefined &&
     assistantEnabled === undefined &&
-    tasksTodayFocusDefault === undefined
+    tasksTodayFocusDefault === undefined &&
+    defaultStartNode === undefined
   ) {
     return errorResponse("At least one preference field is required", 400);
   }
@@ -41,6 +62,7 @@ export const PUT = withAuth(async (req, session) => {
   if (showAdminQuickAccess !== undefined) updates.showAdminQuickAccess = showAdminQuickAccess;
   if (assistantEnabled !== undefined) updates.assistantEnabled = assistantEnabled;
   if (tasksTodayFocusDefault !== undefined) updates.tasksTodayFocusDefault = tasksTodayFocusDefault;
+  if (defaultStartNode !== undefined) updates.defaultStartNode = defaultStartNode;
 
   const [updated] = await db
     .update(users)
@@ -50,6 +72,7 @@ export const PUT = withAuth(async (req, session) => {
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      defaultStartNode: users.defaultStartNode,
     });
 
   return jsonResponse({
@@ -59,5 +82,7 @@ export const PUT = withAuth(async (req, session) => {
       updated?.assistantEnabled ?? (assistantEnabled as boolean | undefined) ?? true,
     tasksTodayFocusDefault:
       updated?.tasksTodayFocusDefault ?? (tasksTodayFocusDefault as boolean | undefined) ?? false,
+    defaultStartNode:
+      updated?.defaultStartNode ?? (defaultStartNode as string | undefined) ?? "dashboard",
   });
 }, { allowApiKey: false });

@@ -22,6 +22,7 @@ const TEST_USER = {
   showAdminQuickAccess: true,
   assistantEnabled: true,
   tasksTodayFocusDefault: false,
+  defaultStartNode: "dashboard" as const,
 };
 
 function jsonReq(url: string, body: unknown) {
@@ -63,6 +64,7 @@ describe("Me API", () => {
       showAdminQuickAccess: false,
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
+      defaultStartNode: "dashboard",
     });
 
     const [updated] = testDb.db
@@ -83,6 +85,7 @@ describe("Me API", () => {
       showAdminQuickAccess: true,
       assistantEnabled: false,
       tasksTodayFocusDefault: false,
+      defaultStartNode: "dashboard",
     });
 
     const [updated] = testDb.db
@@ -103,6 +106,7 @@ describe("Me API", () => {
       showAdminQuickAccess: true,
       assistantEnabled: true,
       tasksTodayFocusDefault: true,
+      defaultStartNode: "dashboard",
     });
 
     const [updated] = testDb.db
@@ -116,6 +120,35 @@ describe("Me API", () => {
   it("PUT rejects invalid payload values", async () => {
     const res = await PUT(
       jsonReq("http://localhost/api/me", { showAdminQuickAccess: "nope" }),
+      {},
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("PUT updates defaultStartNode to projects", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { defaultStartNode: "projects" }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: false,
+      defaultStartNode: "projects",
+    });
+
+    const [updated] = testDb.db
+      .select({ defaultStartNode: users.defaultStartNode })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id))
+      .all();
+    expect(updated.defaultStartNode).toBe("projects");
+  });
+
+  it("PUT rejects invalid defaultStartNode values", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { defaultStartNode: "not-a-node" }),
       {},
     );
     expect(res.status).toBe(400);

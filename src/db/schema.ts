@@ -26,6 +26,11 @@ export const users = sqliteTable("user", {
   tasksTodayFocusDefault: integer("tasksTodayFocusDefault", { mode: "boolean" })
     .notNull()
     .default(false),
+  defaultStartNode: text("defaultStartNode", {
+    enum: ["dashboard", "dispatch", "inbox", "tasks", "notes", "insights", "projects"],
+  })
+    .notNull()
+    .default("dashboard"),
 });
 
 export const accounts = sqliteTable(

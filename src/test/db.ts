@@ -24,7 +24,8 @@ export function createTestDb() {
       "frozenAt" text,
       "showAdminQuickAccess" integer NOT NULL DEFAULT 1,
       "assistantEnabled" integer NOT NULL DEFAULT 1,
-      "tasksTodayFocusDefault" integer NOT NULL DEFAULT 0
+      "tasksTodayFocusDefault" integer NOT NULL DEFAULT 0,
+      "defaultStartNode" text NOT NULL DEFAULT 'dashboard'
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS "user_email_unique" ON "user" ("email");

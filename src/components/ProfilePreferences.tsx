@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/components/ToastProvider";
-import { api, type AIConfig, type AIModelInfo, type AIProvider } from "@/lib/client";
+import { api, type AIConfig, type AIModelInfo, type AIProvider, type DefaultStartNode } from "@/lib/client";
 import { IconKey, IconMoon, IconSparkles, IconSun } from "@/components/icons";
 import { CustomSelect } from "@/components/CustomSelect";
 
@@ -36,17 +36,28 @@ const DEFAULT_MODEL: Record<AIProvider, string> = {
 };
 
 const DISPATCH_HELP_PREF_KEY = "dispatch-show-help";
+const DEFAULT_START_NODE_OPTIONS: Array<{ value: DefaultStartNode; label: string }> = [
+  { value: "dashboard", label: "Dashboard" },
+  { value: "dispatch", label: "Dispatch" },
+  { value: "inbox", label: "Priority Inbox" },
+  { value: "tasks", label: "Tasks" },
+  { value: "notes", label: "Notes" },
+  { value: "insights", label: "Insights" },
+  { value: "projects", label: "All Projects" },
+];
 
 export function ProfilePreferences({
   isAdmin = false,
   showAdminQuickAccess = true,
   assistantEnabled = true,
   tasksTodayFocusDefault = false,
+  defaultStartNode = "dashboard",
 }: {
   isAdmin?: boolean;
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
+  defaultStartNode?: DefaultStartNode;
 }) {
   const { theme, toggleTheme } = useTheme();
   const { update } = useSession();
@@ -55,10 +66,12 @@ export function ProfilePreferences({
   const [showAdminButton, setShowAdminButton] = useState(showAdminQuickAccess);
   const [assistantVisible, setAssistantVisible] = useState(assistantEnabled);
   const [tasksTodayFocusByDefault, setTasksTodayFocusByDefault] = useState(tasksTodayFocusDefault);
+  const [selectedStartNode, setSelectedStartNode] = useState<DefaultStartNode>(defaultStartNode);
   const [showDispatchHelp, setShowDispatchHelp] = useState(true);
   const [savingAdminButtonPref, setSavingAdminButtonPref] = useState(false);
   const [savingAssistantVisibility, setSavingAssistantVisibility] = useState(false);
   const [savingTasksTodayFocusDefault, setSavingTasksTodayFocusDefault] = useState(false);
+  const [savingDefaultStartNode, setSavingDefaultStartNode] = useState(false);
 
   const [aiLoading, setAiLoading] = useState(true);
   const [aiSaving, setAiSaving] = useState(false);
@@ -225,6 +238,23 @@ export function ProfilePreferences({
       toast.error(error instanceof Error ? error.message : "Failed to update Tasks Today Focus default");
     } finally {
       setSavingTasksTodayFocusDefault(false);
+    }
+  }
+
+  async function handleDefaultStartNodeChange(next: string) {
+    const nextNode = next as DefaultStartNode;
+    const previousNode = selectedStartNode;
+    setSelectedStartNode(nextNode);
+    setSavingDefaultStartNode(true);
+    try {
+      await api.me.updatePreferences({ defaultStartNode: nextNode });
+      await update();
+      toast.success("Default start node updated");
+    } catch (error) {
+      setSelectedStartNode(previousNode);
+      toast.error(error instanceof Error ? error.message : "Failed to update default start node");
+    } finally {
+      setSavingDefaultStartNode(false);
     }
   }
 
@@ -416,6 +446,19 @@ export function ProfilePreferences({
           >
             {tasksTodayFocusByDefault ? "Enabled" : "Disabled"}
           </button>
+        </div>
+
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <CustomSelect
+            label="Default Start Node"
+            value={selectedStartNode}
+            onChange={handleDefaultStartNodeChange}
+            options={DEFAULT_START_NODE_OPTIONS}
+            disabled={savingDefaultStartNode}
+          />
+          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+            Selected node opens by default when launching the app.
+          </p>
         </div>
 
         {isAdmin && (

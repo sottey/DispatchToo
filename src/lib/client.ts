@@ -5,6 +5,7 @@ export type TaskPriority = "low" | "medium" | "high";
 export type ProjectStatus = "active" | "paused" | "completed";
 export type UserRole = "member" | "admin";
 export type AIProvider = "openai" | "anthropic" | "google" | "ollama" | "lmstudio" | "custom";
+export type DefaultStartNode = "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
 
 export interface Project {
   id: string;
@@ -127,6 +128,7 @@ export interface MePreferences {
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
+  defaultStartNode?: DefaultStartNode;
 }
 
 export interface AIConfig {

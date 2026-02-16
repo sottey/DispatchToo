@@ -9,6 +9,7 @@ import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 type UserRole = "member" | "admin";
+type DefaultStartNode = "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
 
 function ensureAuthDatabaseReady() {
   ensureDbEncryptionForRuntime(sqlite);
@@ -42,6 +43,7 @@ async function getUserAccess(
   showAdminQuickAccess: boolean;
   assistantEnabled: boolean;
   tasksTodayFocusDefault: boolean;
+  defaultStartNode: DefaultStartNode;
 } | null> {
   ensureAuthDatabaseReady();
   const [dbUser] = await db
@@ -51,6 +53,7 @@ async function getUserAccess(
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      defaultStartNode: users.defaultStartNode,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -66,6 +69,7 @@ async function getUserAccess(
     showAdminQuickAccess: dbUser.showAdminQuickAccess ?? true,
     assistantEnabled: dbUser.assistantEnabled ?? true,
     tasksTodayFocusDefault: dbUser.tasksTodayFocusDefault ?? false,
+    defaultStartNode: (dbUser.defaultStartNode as DefaultStartNode | null) ?? "dashboard",
   };
 }
 
@@ -110,6 +114,7 @@ providers.push(
         showAdminQuickAccess: user.showAdminQuickAccess ?? true,
         assistantEnabled: user.assistantEnabled ?? true,
         tasksTodayFocusDefault: user.tasksTodayFocusDefault ?? false,
+        defaultStartNode: (user.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard",
       };
     },
   })
@@ -203,6 +208,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             delete token.showAdminQuickAccess;
             delete token.assistantEnabled;
             delete token.tasksTodayFocusDefault;
+            delete token.defaultStartNode;
             return token;
           }
           token.role = access.role;
@@ -210,6 +216,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.showAdminQuickAccess = access.showAdminQuickAccess;
           token.assistantEnabled = access.assistantEnabled;
           token.tasksTodayFocusDefault = access.tasksTodayFocusDefault;
+          token.defaultStartNode = access.defaultStartNode;
         } catch (error) {
           // Avoid invalidating the active session during transient rekey transitions.
           console.error("Failed to refresh JWT access claims from database:", error);
@@ -218,6 +225,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
           token.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
           token.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
+          token.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";
         }
       }
 
@@ -231,6 +239,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
         session.user.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
         session.user.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
+        session.user.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";
       }
       return session;
     },
