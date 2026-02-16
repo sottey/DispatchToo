@@ -42,7 +42,7 @@ interface NavItem {
 }
 
 const OVERVIEW_NAV: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: IconGrid },
+  { href: "/dashboard", label: "Dashboard", icon: IconGrid },
 ];
 
 const WORKSPACE_NAV: NavItem[] = [
@@ -215,7 +215,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
         collapsed ? "flex-col items-center gap-2 py-3" : "items-center justify-between h-14 px-3"
       }`}>
         <Link
-          href="/"
+          href="/dashboard"
           className={`flex items-center hover:opacity-80 transition-opacity ${
             collapsed ? "" : "gap-3 min-w-0"
           }`}

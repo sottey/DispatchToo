@@ -1,12 +1,11 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Dashboard } from "@/components/Dashboard";
 
 const START_NODE_ROUTE: Record<
   "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects",
   string
 > = {
-  dashboard: "/",
+  dashboard: "/dashboard",
   dispatch: "/dispatch",
   inbox: "/inbox",
   tasks: "/tasks",
@@ -23,9 +22,5 @@ export default async function Home() {
 
   const defaultStartNode = session.user.defaultStartNode ?? "dashboard";
   const target = START_NODE_ROUTE[defaultStartNode] ?? "/";
-  if (target !== "/") {
-    redirect(target);
-  }
-
-  return <Dashboard userName={session.user.name ?? "there"} />;
+  redirect(target);
 }

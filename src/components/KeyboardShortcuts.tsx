@@ -94,7 +94,7 @@ export function KeyboardShortcuts({
             return;
           case "h":
             e.preventDefault();
-            router.push("/");
+            router.push("/dashboard");
             return;
         }
       }

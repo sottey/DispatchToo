@@ -10,10 +10,12 @@ interface SearchOverlayProps {
 }
 
 type ResultItem =
+  | { type: "action"; id: string; title: string; subtitle: string | null; keywords: string[] }
   | { type: "task"; id: string; title: string; subtitle: string | null }
   | { type: "note"; id: string; title: string; subtitle: string | null }
   | { type: "dispatch"; id: string; title: string; subtitle: string | null }
   | { type: "project"; id: string; title: string; subtitle: string | null };
+type ActionItem = Extract<ResultItem, { type: "action" }>;
 
 export function SearchOverlay({ onClose }: SearchOverlayProps) {
   const router = useRouter();
@@ -66,12 +68,74 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
 
   function handleInputChange(value: string) {
     setQuery(value);
+    setSelectedIndex(0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => doSearch(value), 300);
   }
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const actionItems: ActionItem[] = [
+    {
+      type: "action",
+      id: "create-task",
+      title: "Create Task",
+      subtitle: "Open new task flow",
+      keywords: ["new", "task", "create", "add"],
+    },
+    {
+      type: "action",
+      id: "create-note",
+      title: "Create New Note",
+      subtitle: "Open new note flow",
+      keywords: ["new", "note", "create", "add"],
+    },
+    {
+      type: "action",
+      id: "create-project",
+      title: "Create Project",
+      subtitle: "Open new project flow",
+      keywords: ["new", "project", "create", "add"],
+    },
+    {
+      type: "action",
+      id: "open-dashboard",
+      title: "Open Dashboard",
+      subtitle: "Open overview dashboard",
+      keywords: ["dashboard", "home", "overview"],
+    },
+    {
+      type: "action",
+      id: "open-dispatch",
+      title: "Open Dispatch",
+      subtitle: "Jump to daily dispatch",
+      keywords: ["dispatch", "day", "daily"],
+    },
+    {
+      type: "action",
+      id: "open-inbox",
+      title: "Open Priority Inbox",
+      subtitle: "Review priority items",
+      keywords: ["inbox", "priority"],
+    },
+  ];
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredActionItems = actionItems.filter((item) => {
+    if (!normalizedQuery) return true;
+    return (
+      item.title.toLowerCase().includes(normalizedQuery) ||
+      (item.subtitle ?? "").toLowerCase().includes(normalizedQuery) ||
+      item.keywords.some((keyword) => keyword.includes(normalizedQuery))
+    );
+  });
+
   // Flatten results for keyboard navigation
-  const flatItems: ResultItem[] = [];
+  const flatItems: ResultItem[] = [...filteredActionItems];
   if (results) {
     for (const task of results.tasks) {
       flatItems.push({
@@ -110,6 +174,28 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
   function navigateToItem(item: ResultItem) {
     onClose();
     switch (item.type) {
+      case "action":
+        switch (item.id) {
+          case "create-task":
+            router.push("/tasks?new=1");
+            break;
+          case "create-note":
+            router.push("/notes?new=1");
+            break;
+          case "create-project":
+            router.push("/projects?new=1");
+            break;
+          case "open-dashboard":
+            router.push("/dashboard");
+            break;
+          case "open-dispatch":
+            router.push("/dispatch");
+            break;
+          case "open-inbox":
+            router.push("/inbox");
+            break;
+        }
+        break;
       case "task":
         router.push("/tasks");
         break;
@@ -140,6 +226,10 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
 
   const hasResults = flatItems.length > 0;
   const hasQuery = query.trim().length > 0;
+  const taskItems = flatItems.filter((i) => i.type === "task");
+  const noteItems = flatItems.filter((i) => i.type === "note");
+  const dispatchItems = flatItems.filter((i) => i.type === "dispatch");
+  const projectItems = flatItems.filter((i) => i.type === "project");
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
@@ -179,48 +269,51 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
 
           {!loading && hasResults && (
             <div className="py-2">
-              {results!.tasks.length > 0 && (
+              {filteredActionItems.length > 0 && (
+                <ResultSection
+                  label="Actions"
+                  items={filteredActionItems}
+                  allItems={flatItems}
+                  selectedIndex={selectedIndex}
+                  onSelect={navigateToItem}
+                />
+              )}
+              {taskItems.length > 0 && (
                 <ResultSection
                   label="Tasks"
-                  items={flatItems.filter((i) => i.type === "task")}
+                  items={taskItems}
                   allItems={flatItems}
                   selectedIndex={selectedIndex}
                   onSelect={navigateToItem}
                 />
               )}
-              {results!.notes.length > 0 && (
+              {noteItems.length > 0 && (
                 <ResultSection
                   label="Notes"
-                  items={flatItems.filter((i) => i.type === "note")}
+                  items={noteItems}
                   allItems={flatItems}
                   selectedIndex={selectedIndex}
                   onSelect={navigateToItem}
                 />
               )}
-              {results!.dispatches.length > 0 && (
+              {dispatchItems.length > 0 && (
                 <ResultSection
                   label="Dispatches"
-                  items={flatItems.filter((i) => i.type === "dispatch")}
+                  items={dispatchItems}
                   allItems={flatItems}
                   selectedIndex={selectedIndex}
                   onSelect={navigateToItem}
                 />
               )}
-              {results!.projects.length > 0 && (
+              {projectItems.length > 0 && (
                 <ResultSection
                   label="Projects"
-                  items={flatItems.filter((i) => i.type === "project")}
+                  items={projectItems}
                   allItems={flatItems}
                   selectedIndex={selectedIndex}
                   onSelect={navigateToItem}
                 />
               )}
-            </div>
-          )}
-
-          {!loading && !hasQuery && (
-            <div className="px-4 py-6 text-center text-sm text-neutral-400 dark:text-neutral-500">
-              Start typing to search across all your data
             </div>
           )}
         </div>
@@ -281,6 +374,7 @@ function ResultSection({
 
 function TypeBadge({ type }: { type: ResultItem["type"] }) {
   const styles = {
+    action: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
     task: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300",
     note: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300",
     dispatch:
@@ -288,7 +382,7 @@ function TypeBadge({ type }: { type: ResultItem["type"] }) {
     project:
       "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   };
-  const labels = { task: "T", note: "N", dispatch: "D", project: "P" };
+  const labels = { action: "A", task: "T", note: "N", dispatch: "D", project: "P" };
 
   return (
     <span
