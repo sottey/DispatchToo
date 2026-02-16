@@ -41,10 +41,12 @@ export function ProfilePreferences({
   isAdmin = false,
   showAdminQuickAccess = true,
   assistantEnabled = true,
+  tasksTodayFocusDefault = false,
 }: {
   isAdmin?: boolean;
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
+  tasksTodayFocusDefault?: boolean;
 }) {
   const { theme, toggleTheme } = useTheme();
   const { update } = useSession();
@@ -52,9 +54,11 @@ export function ProfilePreferences({
 
   const [showAdminButton, setShowAdminButton] = useState(showAdminQuickAccess);
   const [assistantVisible, setAssistantVisible] = useState(assistantEnabled);
+  const [tasksTodayFocusByDefault, setTasksTodayFocusByDefault] = useState(tasksTodayFocusDefault);
   const [showDispatchHelp, setShowDispatchHelp] = useState(true);
   const [savingAdminButtonPref, setSavingAdminButtonPref] = useState(false);
   const [savingAssistantVisibility, setSavingAssistantVisibility] = useState(false);
+  const [savingTasksTodayFocusDefault, setSavingTasksTodayFocusDefault] = useState(false);
 
   const [aiLoading, setAiLoading] = useState(true);
   const [aiSaving, setAiSaving] = useState(false);
@@ -204,6 +208,23 @@ export function ProfilePreferences({
       toast.error(error instanceof Error ? error.message : "Failed to update assistant visibility");
     } finally {
       setSavingAssistantVisibility(false);
+    }
+  }
+
+  async function handleToggleTasksTodayFocusDefault() {
+    const next = !tasksTodayFocusByDefault;
+    setTasksTodayFocusByDefault(next);
+    setSavingTasksTodayFocusDefault(true);
+
+    try {
+      await api.me.updatePreferences({ tasksTodayFocusDefault: next });
+      await update();
+      toast.success(next ? "Tasks Today Focus default enabled" : "Tasks Today Focus default disabled");
+    } catch (error) {
+      setTasksTodayFocusByDefault(!next);
+      toast.error(error instanceof Error ? error.message : "Failed to update Tasks Today Focus default");
+    } finally {
+      setSavingTasksTodayFocusDefault(false);
     }
   }
 
@@ -374,6 +395,26 @@ export function ProfilePreferences({
             }`}
           >
             {showDispatchHelp ? "Shown" : "Hidden"}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tasks: Today Focus Default</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              When enabled, Tasks page opens with "Show only due today" turned on (due today + overdue).
+            </p>
+          </div>
+          <button
+            onClick={handleToggleTasksTodayFocusDefault}
+            disabled={savingTasksTodayFocusDefault}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 disabled:opacity-60 ${
+              tasksTodayFocusByDefault
+                ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300"
+                : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            }`}
+          >
+            {tasksTodayFocusByDefault ? "Enabled" : "Disabled"}
           </button>
         </div>
 

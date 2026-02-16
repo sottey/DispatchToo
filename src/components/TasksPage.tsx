@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   api,
   type Task,
@@ -9,6 +10,7 @@ import {
   type TaskPriority,
   type Project,
 } from "@/lib/client";
+import { todayDateKey } from "@/lib/datetime";
 import { TaskModal } from "@/components/TaskModal";
 import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
@@ -28,6 +30,7 @@ const COMPLETE_DISMISS_MS = 420;
 export function TasksPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -44,6 +47,8 @@ export function TasksPage() {
   );
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [showCompleted, setShowCompleted] = useState(false);
+  const [todayFocusOnly, setTodayFocusOnly] = useState(false);
+  const [todayFocusInitialized, setTodayFocusInitialized] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -51,6 +56,12 @@ export function TasksPage() {
   const [completingIds, setCompletingIds] = useState<string[]>([]);
   const completionTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const hasActiveFilters = Boolean(statusFilter || priorityFilter || projectFilter);
+
+  useEffect(() => {
+    if (todayFocusInitialized || sessionStatus === "loading") return;
+    setTodayFocusOnly(session?.user?.tasksTodayFocusDefault ?? false);
+    setTodayFocusInitialized(true);
+  }, [todayFocusInitialized, session?.user?.tasksTodayFocusDefault, sessionStatus]);
 
   function queueCompletionCleanup(taskId: string) {
     const existing = completionTimeoutsRef.current[taskId];
@@ -174,9 +185,14 @@ export function TasksPage() {
     }
   }, [statusFilter]);
 
+  const today = todayDateKey();
+  const todayScopedTasks = todayFocusOnly
+    ? tasks.filter((task) => Boolean(task.dueDate) && task.dueDate! <= today)
+    : tasks;
+
   const filteredTasks = showCompleted
-    ? tasks
-    : tasks.filter((task) => task.status !== "done" || completingIds.includes(task.id));
+    ? todayScopedTasks
+    : todayScopedTasks.filter((task) => task.status !== "done" || completingIds.includes(task.id));
 
   const sorted = [...filteredTasks].sort((a, b) => {
     if (sortBy === "dueDate") {
@@ -297,9 +313,11 @@ export function TasksPage() {
   const hasAnyTasks = tasks.length > 0;
   const emptyMessage = statusFilter || priorityFilter || projectFilter
     ? "Try adjusting your filters."
-    : hasAnyTasks && !showCompleted
-      ? "All tasks are completed. Toggle Show Completed to view them."
-      : "Create your first task to get started.";
+    : todayFocusOnly
+      ? "No tasks are due today or overdue."
+      : hasAnyTasks && !showCompleted
+        ? "All tasks are completed. Toggle Show Completed to view them."
+        : "Create your first task to get started.";
 
   const statusFilterOptions = [
     { value: "", label: "All", dot: "bg-neutral-400" },
@@ -497,6 +515,26 @@ export function TasksPage() {
                 />
               </span>
             </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={todayFocusOnly}
+              onClick={() => setTodayFocusOnly((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
+            >
+              <span>Show only due today</span>
+              <span
+                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                  todayFocusOnly ? "bg-blue-600" : "bg-neutral-300 dark:bg-neutral-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
+                    todayFocusOnly ? "translate-x-3.5" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -525,7 +563,7 @@ export function TasksPage() {
           <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1 mb-4">
             {emptyMessage}
           </p>
-          {!statusFilter && !priorityFilter && !projectFilter && (
+          {!statusFilter && !priorityFilter && !projectFilter && !todayFocusOnly && (
             <button
               onClick={() => {
                 setEditingTask(null);

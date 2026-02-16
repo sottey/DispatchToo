@@ -21,6 +21,7 @@ const TEST_USER = {
   role: "admin" as const,
   showAdminQuickAccess: true,
   assistantEnabled: true,
+  tasksTodayFocusDefault: false,
 };
 
 function jsonReq(url: string, body: unknown) {
@@ -58,7 +59,11 @@ describe("Me API", () => {
       {},
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ showAdminQuickAccess: false, assistantEnabled: true });
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: false,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: false,
+    });
 
     const [updated] = testDb.db
       .select({ showAdminQuickAccess: users.showAdminQuickAccess })
@@ -74,7 +79,11 @@ describe("Me API", () => {
       {},
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ showAdminQuickAccess: true, assistantEnabled: false });
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: false,
+      tasksTodayFocusDefault: false,
+    });
 
     const [updated] = testDb.db
       .select({ assistantEnabled: users.assistantEnabled })
@@ -82,6 +91,26 @@ describe("Me API", () => {
       .where(eq(users.id, TEST_USER.id))
       .all();
     expect(updated.assistantEnabled).toBe(false);
+  });
+
+  it("PUT updates tasksTodayFocusDefault to true", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { tasksTodayFocusDefault: true }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: true,
+    });
+
+    const [updated] = testDb.db
+      .select({ tasksTodayFocusDefault: users.tasksTodayFocusDefault })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id))
+      .all();
+    expect(updated.tasksTodayFocusDefault).toBe(true);
   });
 
   it("PUT rejects invalid payload values", async () => {

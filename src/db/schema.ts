@@ -23,6 +23,9 @@ export const users = sqliteTable("user", {
   assistantEnabled: integer("assistantEnabled", { mode: "boolean" })
     .notNull()
     .default(true),
+  tasksTodayFocusDefault: integer("tasksTodayFocusDefault", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const accounts = sqliteTable(

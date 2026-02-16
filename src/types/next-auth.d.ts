@@ -9,6 +9,7 @@ declare module "next-auth" {
       isFrozen: boolean;
       showAdminQuickAccess: boolean;
       assistantEnabled: boolean;
+      tasksTodayFocusDefault: boolean;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -20,6 +21,7 @@ declare module "next-auth" {
     isFrozen?: boolean;
     showAdminQuickAccess?: boolean;
     assistantEnabled?: boolean;
+    tasksTodayFocusDefault?: boolean;
   }
 }
 
@@ -29,6 +31,7 @@ declare module "next-auth/jwt" {
     isFrozen?: boolean;
     showAdminQuickAccess?: boolean;
     assistantEnabled?: boolean;
+    tasksTodayFocusDefault?: boolean;
     provider?: string;
   }
 }

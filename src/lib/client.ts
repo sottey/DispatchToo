@@ -126,6 +126,7 @@ export interface AdminSecuritySettings {
 export interface MePreferences {
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
+  tasksTodayFocusDefault?: boolean;
 }
 
 export interface AIConfig {

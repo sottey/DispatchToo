@@ -36,7 +36,13 @@ function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
 
 async function getUserAccess(
   userId: string,
-): Promise<{ role: UserRole; isFrozen: boolean; showAdminQuickAccess: boolean; assistantEnabled: boolean } | null> {
+): Promise<{
+  role: UserRole;
+  isFrozen: boolean;
+  showAdminQuickAccess: boolean;
+  assistantEnabled: boolean;
+  tasksTodayFocusDefault: boolean;
+} | null> {
   ensureAuthDatabaseReady();
   const [dbUser] = await db
     .select({
@@ -44,6 +50,7 @@ async function getUserAccess(
       frozenAt: users.frozenAt,
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
+      tasksTodayFocusDefault: users.tasksTodayFocusDefault,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -58,6 +65,7 @@ async function getUserAccess(
     isFrozen: Boolean(dbUser.frozenAt),
     showAdminQuickAccess: dbUser.showAdminQuickAccess ?? true,
     assistantEnabled: dbUser.assistantEnabled ?? true,
+    tasksTodayFocusDefault: dbUser.tasksTodayFocusDefault ?? false,
   };
 }
 
@@ -101,6 +109,7 @@ providers.push(
         isFrozen: false,
         showAdminQuickAccess: user.showAdminQuickAccess ?? true,
         assistantEnabled: user.assistantEnabled ?? true,
+        tasksTodayFocusDefault: user.tasksTodayFocusDefault ?? false,
       };
     },
   })
@@ -193,12 +202,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             delete token.isFrozen;
             delete token.showAdminQuickAccess;
             delete token.assistantEnabled;
+            delete token.tasksTodayFocusDefault;
             return token;
           }
           token.role = access.role;
           token.isFrozen = access.isFrozen;
           token.showAdminQuickAccess = access.showAdminQuickAccess;
           token.assistantEnabled = access.assistantEnabled;
+          token.tasksTodayFocusDefault = access.tasksTodayFocusDefault;
         } catch (error) {
           // Avoid invalidating the active session during transient rekey transitions.
           console.error("Failed to refresh JWT access claims from database:", error);
@@ -206,6 +217,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.isFrozen = Boolean(token.isFrozen);
           token.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
           token.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
+          token.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
         }
       }
 
@@ -218,6 +230,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.isFrozen = Boolean(token.isFrozen);
         session.user.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
         session.user.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
+        session.user.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
       }
       return session;
     },

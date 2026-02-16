@@ -23,7 +23,8 @@ export function createTestDb() {
       "role" text NOT NULL DEFAULT 'member',
       "frozenAt" text,
       "showAdminQuickAccess" integer NOT NULL DEFAULT 1,
-      "assistantEnabled" integer NOT NULL DEFAULT 1
+      "assistantEnabled" integer NOT NULL DEFAULT 1,
+      "tasksTodayFocusDefault" integer NOT NULL DEFAULT 0
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS "user_email_unique" ON "user" ("email");

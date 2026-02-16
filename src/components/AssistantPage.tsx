@@ -5,7 +5,11 @@ import Link from "next/link";
 import Markdown from "react-markdown";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { markdownComponents } from "@/components/NoteEditor";
+import {
+  markdownComponents,
+  markdownRemarkPlugins,
+  markdownRehypePlugins,
+} from "@/components/NoteEditor";
 import { useToast } from "@/components/ToastProvider";
 import {
   api,
@@ -530,7 +534,13 @@ function MessageBubble({ message }: { message: UIMessage }) {
                   key={`${message.id}-text-${index}`}
                   className={isUser ? "prose prose-sm prose-invert max-w-none" : "prose prose-sm dark:prose-invert max-w-none"}
                 >
-                  <Markdown components={markdownComponents}>{part.text}</Markdown>
+                  <Markdown
+                    components={markdownComponents}
+                    remarkPlugins={markdownRemarkPlugins}
+                    rehypePlugins={markdownRehypePlugins}
+                  >
+                    {part.text}
+                  </Markdown>
                 </div>
               );
             }

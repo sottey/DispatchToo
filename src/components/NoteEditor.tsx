@@ -10,6 +10,10 @@ import type {
 } from "react";
 import { useRouter } from "next/navigation";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import rehypeHighlight from "rehype-highlight";
 import { api, type Note } from "@/lib/client";
 import { formatTimestamp } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
@@ -180,6 +184,9 @@ export const markdownComponents = {
     />
   ),
 };
+
+export const markdownRemarkPlugins = [remarkGfm];
+export const markdownRehypePlugins = [rehypeRaw, rehypeSanitize, rehypeHighlight];
 
 export function NoteEditor({ noteId }: { noteId: string }) {
   const router = useRouter();
@@ -515,7 +522,13 @@ export function NoteEditor({ noteId }: { noteId: string }) {
           {isPreview ? (
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 min-h-[420px] animate-fade-in-up shadow-sm text-neutral-700 dark:text-neutral-100">
               {content ? (
-                <Markdown components={markdownComponents}>{content}</Markdown>
+                <Markdown
+                  components={markdownComponents}
+                  remarkPlugins={markdownRemarkPlugins}
+                  rehypePlugins={markdownRehypePlugins}
+                >
+                  {content}
+                </Markdown>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[360px] text-center">
                   <IconDocument className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mb-3" />

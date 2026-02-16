@@ -15,7 +15,7 @@ export const PUT = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { showAdminQuickAccess, assistantEnabled } = body as Record<string, unknown>;
+  const { showAdminQuickAccess, assistantEnabled, tasksTodayFocusDefault } = body as Record<string, unknown>;
 
   if (showAdminQuickAccess !== undefined && typeof showAdminQuickAccess !== "boolean") {
     return errorResponse("showAdminQuickAccess must be a boolean", 400);
@@ -25,13 +25,22 @@ export const PUT = withAuth(async (req, session) => {
     return errorResponse("assistantEnabled must be a boolean", 400);
   }
 
-  if (showAdminQuickAccess === undefined && assistantEnabled === undefined) {
+  if (tasksTodayFocusDefault !== undefined && typeof tasksTodayFocusDefault !== "boolean") {
+    return errorResponse("tasksTodayFocusDefault must be a boolean", 400);
+  }
+
+  if (
+    showAdminQuickAccess === undefined &&
+    assistantEnabled === undefined &&
+    tasksTodayFocusDefault === undefined
+  ) {
     return errorResponse("At least one preference field is required", 400);
   }
 
   const updates: Record<string, unknown> = {};
   if (showAdminQuickAccess !== undefined) updates.showAdminQuickAccess = showAdminQuickAccess;
   if (assistantEnabled !== undefined) updates.assistantEnabled = assistantEnabled;
+  if (tasksTodayFocusDefault !== undefined) updates.tasksTodayFocusDefault = tasksTodayFocusDefault;
 
   const [updated] = await db
     .update(users)
@@ -40,6 +49,7 @@ export const PUT = withAuth(async (req, session) => {
     .returning({
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
+      tasksTodayFocusDefault: users.tasksTodayFocusDefault,
     });
 
   return jsonResponse({
@@ -47,5 +57,7 @@ export const PUT = withAuth(async (req, session) => {
       updated?.showAdminQuickAccess ?? (showAdminQuickAccess as boolean | undefined) ?? true,
     assistantEnabled:
       updated?.assistantEnabled ?? (assistantEnabled as boolean | undefined) ?? true,
+    tasksTodayFocusDefault:
+      updated?.tasksTodayFocusDefault ?? (tasksTodayFocusDefault as boolean | undefined) ?? false,
   });
 }, { allowApiKey: false });
