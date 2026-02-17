@@ -14,5 +14,10 @@ export default async function NoteEditorPage({
 
   const { id } = await params;
 
-  return <NoteEditor noteId={id} />;
+  return (
+    <NoteEditor
+      noteId={id}
+      notesMetadataCollapsedDefault={session.user.notesMetadataCollapsedDefault ?? false}
+    />
+  );
 }

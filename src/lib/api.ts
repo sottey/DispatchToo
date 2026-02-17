@@ -43,6 +43,8 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      showDispatchHelp: users.showDispatchHelp,
+      notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     })
     .from(apiKeys)
@@ -68,6 +70,8 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       showAdminQuickAccess: result.showAdminQuickAccess ?? true,
       assistantEnabled: result.assistantEnabled ?? true,
       tasksTodayFocusDefault: result.tasksTodayFocusDefault ?? false,
+      showDispatchHelp: result.showDispatchHelp ?? true,
+      notesMetadataCollapsedDefault: result.notesMetadataCollapsedDefault ?? false,
       defaultStartNode:
         (result.defaultStartNode as
           | "dashboard"
@@ -103,6 +107,9 @@ export function withAuth<TCtx = unknown>(
       session.user.showAdminQuickAccess = session.user.showAdminQuickAccess ?? true;
       session.user.assistantEnabled = session.user.assistantEnabled ?? true;
       session.user.tasksTodayFocusDefault = session.user.tasksTodayFocusDefault ?? false;
+      session.user.showDispatchHelp = session.user.showDispatchHelp ?? true;
+      session.user.notesMetadataCollapsedDefault =
+        session.user.notesMetadataCollapsedDefault ?? false;
       session.user.defaultStartNode = session.user.defaultStartNode ?? "dashboard";
       if (session.user.isFrozen) {
         return errorResponse("Account is frozen", 403);
@@ -118,6 +125,9 @@ export function withAuth<TCtx = unknown>(
         apiKeySession.user.showAdminQuickAccess = apiKeySession.user.showAdminQuickAccess ?? true;
         apiKeySession.user.assistantEnabled = apiKeySession.user.assistantEnabled ?? true;
         apiKeySession.user.tasksTodayFocusDefault = apiKeySession.user.tasksTodayFocusDefault ?? false;
+        apiKeySession.user.showDispatchHelp = apiKeySession.user.showDispatchHelp ?? true;
+        apiKeySession.user.notesMetadataCollapsedDefault =
+          apiKeySession.user.notesMetadataCollapsedDefault ?? false;
         apiKeySession.user.defaultStartNode = apiKeySession.user.defaultStartNode ?? "dashboard";
         if (apiKeySession.user.isFrozen) {
           return errorResponse("Account is frozen", 403);

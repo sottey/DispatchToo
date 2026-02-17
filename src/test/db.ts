@@ -25,6 +25,8 @@ export function createTestDb() {
       "showAdminQuickAccess" integer NOT NULL DEFAULT 1,
       "assistantEnabled" integer NOT NULL DEFAULT 1,
       "tasksTodayFocusDefault" integer NOT NULL DEFAULT 0,
+      "showDispatchHelp" integer NOT NULL DEFAULT 1,
+      "notesMetadataCollapsedDefault" integer NOT NULL DEFAULT 0,
       "defaultStartNode" text NOT NULL DEFAULT 'dashboard'
     );
 
@@ -90,12 +92,23 @@ export function createTestDb() {
       "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
       "title" text NOT NULL,
       "content" text,
+      "metadata" text,
+      "type" text,
+      "folderId" text,
+      "projectId" text REFERENCES "project"("id") ON DELETE SET NULL,
+      "dispatchDate" text,
+      "hasRecurrence" integer NOT NULL DEFAULT 0,
       "deletedAt" text,
       "createdAt" text NOT NULL DEFAULT (current_timestamp),
       "updatedAt" text NOT NULL DEFAULT (current_timestamp)
     );
 
     CREATE INDEX "note_userId_idx" ON "note" ("userId");
+    CREATE INDEX "note_userId_type_idx" ON "note" ("userId", "type");
+    CREATE INDEX "note_userId_folderId_idx" ON "note" ("userId", "folderId");
+    CREATE INDEX "note_userId_projectId_idx" ON "note" ("userId", "projectId");
+    CREATE INDEX "note_userId_dispatchDate_idx" ON "note" ("userId", "dispatchDate");
+    CREATE INDEX "note_userId_hasRecurrence_idx" ON "note" ("userId", "hasRecurrence");
 
     CREATE TABLE "dispatch" (
       "id" text PRIMARY KEY NOT NULL,

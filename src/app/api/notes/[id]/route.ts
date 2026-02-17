@@ -2,8 +2,43 @@ import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { notes } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import {
+  FrontmatterValidationError,
+  parseAndNormalizeNoteFrontmatter,
+  parseStoredNoteMetadata,
+} from "@/lib/note-frontmatter";
 
 type RouteContext = { params: Promise<{ id: string }> };
+type NoteResponse = Omit<typeof notes.$inferSelect, "metadata"> & {
+  metadata: Record<string, unknown> | null;
+};
+
+function toNoteResponse(note: typeof notes.$inferSelect): NoteResponse {
+  const storedMetadata = parseStoredNoteMetadata(note.metadata);
+  if (storedMetadata) {
+    return {
+      ...note,
+      metadata: storedMetadata,
+    };
+  }
+
+  if (typeof note.content === "string" && note.content.length > 0) {
+    try {
+      const parsed = parseAndNormalizeNoteFrontmatter(note.content);
+      return {
+        ...note,
+        metadata: parsed.metadata,
+      };
+    } catch {
+      // Fall back to null metadata for malformed content.
+    }
+  }
+
+  return {
+    ...note,
+    metadata: null,
+  };
+}
 
 /** GET /api/notes/[id] — get a single note */
 export const GET = withAuth(async (req, session, ctx) => {
@@ -18,7 +53,7 @@ export const GET = withAuth(async (req, session, ctx) => {
     return errorResponse("Note not found", 404);
   }
 
-  return jsonResponse(note);
+  return jsonResponse(toNoteResponse(note));
 });
 
 /** PUT /api/notes/[id] — update a note */
@@ -52,7 +87,16 @@ export const PUT = withAuth(async (req, session, ctx) => {
 
   // Check note exists, belongs to user, and is not soft-deleted
   const [existing] = await db
-    .select({ id: notes.id })
+    .select({
+      id: notes.id,
+      content: notes.content,
+      metadata: notes.metadata,
+      type: notes.type,
+      folderId: notes.folderId,
+      projectId: notes.projectId,
+      dispatchDate: notes.dispatchDate,
+      hasRecurrence: notes.hasRecurrence,
+    })
     .from(notes)
     .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!), isNull(notes.deletedAt)));
 
@@ -64,13 +108,36 @@ export const PUT = withAuth(async (req, session, ctx) => {
   if (title !== undefined) updates.title = (title as string).trim();
   if (content !== undefined) updates.content = content;
 
+  if (content !== undefined) {
+    try {
+      const frontmatter = parseAndNormalizeNoteFrontmatter(content as string);
+      updates.metadata = frontmatter.metadata ? JSON.stringify(frontmatter.metadata) : null;
+      updates.type = frontmatter.type;
+      updates.folderId = frontmatter.folderId;
+      updates.projectId = frontmatter.projectId;
+      updates.dispatchDate = frontmatter.dispatchDate;
+      updates.hasRecurrence = frontmatter.hasRecurrence;
+    } catch (error) {
+      if (error instanceof FrontmatterValidationError) {
+        return jsonResponse(
+          {
+            error: "Invalid frontmatter",
+            details: error.details,
+          },
+          400,
+        );
+      }
+      throw error;
+    }
+  }
+
   const [updated] = await db
     .update(notes)
     .set(updates)
     .where(eq(notes.id, id))
     .returning();
 
-  return jsonResponse(updated);
+  return jsonResponse(toNoteResponse(updated));
 });
 
 /** DELETE /api/notes/[id] — soft-delete a note (moves to recycle bin) */

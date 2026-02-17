@@ -28,9 +28,7 @@ const STATUS_STYLES: Record<TaskStatus, { dot: string; label: string; ring: stri
 };
 
 const COMPLETE_DISMISS_MS = 420;
-const DISPATCH_HELP_PREF_KEY = "dispatch-show-help";
-
-export function DispatchPage() {
+export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchHelpDefault?: boolean }) {
   const { toast } = useToast();
   const [date, setDate] = useState(todayDateKey);
   const [dispatch, setDispatch] = useState<Dispatch | null>(null);
@@ -48,7 +46,7 @@ export function DispatchPage() {
   const [unfinalizing, setUnfinalizing] = useState(false);
   const [unfinalizeWarning, setUnfinalizeWarning] = useState<{ nextDate: string } | null>(null);
   const [completingIds, setCompletingIds] = useState<string[]>([]);
-  const [showDispatchHelp, setShowDispatchHelp] = useState(true);
+  const [showDispatchHelp, setShowDispatchHelp] = useState(showDispatchHelpDefault);
   const completionTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const fetchDispatch = useCallback(async () => {
@@ -95,25 +93,8 @@ export function DispatchPage() {
   }, [date]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DISPATCH_HELP_PREF_KEY);
-      if (stored === "false") {
-        setShowDispatchHelp(false);
-      }
-    } catch {
-      // Ignore local preference read failures.
-    }
-
-    function handleDispatchPrefChange(event: Event) {
-      const custom = event as CustomEvent<{ showDispatchHelp?: boolean }>;
-      if (typeof custom.detail?.showDispatchHelp === "boolean") {
-        setShowDispatchHelp(custom.detail.showDispatchHelp);
-      }
-    }
-
-    window.addEventListener("dispatch:preferences-changed", handleDispatchPrefChange);
-    return () => window.removeEventListener("dispatch:preferences-changed", handleDispatchPrefChange);
-  }, []);
+    setShowDispatchHelp(showDispatchHelpDefault);
+  }, [showDispatchHelpDefault]);
 
   useEffect(
     () => () => {

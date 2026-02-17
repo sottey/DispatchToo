@@ -5,6 +5,7 @@ import type {
   AnchorHTMLAttributes,
   HTMLAttributes,
   ImgHTMLAttributes,
+  ReactNode,
   ThHTMLAttributes,
   TdHTMLAttributes,
 } from "react";
@@ -14,12 +15,14 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
+import yaml from "js-yaml";
 import { api, type Note } from "@/lib/client";
 import { formatTimestamp } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import {
   IconCalendar,
   IconCheck,
+  IconChevronDown,
   IconClock,
   IconDocument,
   IconPencil,
@@ -188,7 +191,183 @@ export const markdownComponents = {
 export const markdownRemarkPlugins = [remarkGfm];
 export const markdownRehypePlugins = [rehypeRaw, rehypeSanitize, rehypeHighlight];
 
-export function NoteEditor({ noteId }: { noteId: string }) {
+type PreviewFrontmatter = {
+  hasFrontmatter: boolean;
+  metadata: Record<string, unknown> | null;
+  contentWithoutFrontmatter: string;
+  parseError: string | null;
+};
+
+const metadataPrimaryFields = [
+  "title",
+  "status",
+  "visibility",
+  "date",
+  "updated",
+  "category",
+  "tags",
+  "authors",
+  "draft",
+] as const;
+
+const metadataAdvancedFields = [
+  "slug",
+  "summary",
+  "description",
+  "publish_at",
+  "expires_at",
+  "series",
+  "series_order",
+  "language",
+  "region",
+  "audience",
+  "canonical_url",
+  "aliases",
+  "related",
+  "seo",
+  "template",
+  "template_version",
+  "custom",
+] as const;
+
+const DEFAULT_FRONTMATTER_TEMPLATE = `---
+title: ""
+status: draft
+visibility: public
+tags: []
+---`;
+
+function parsePreviewFrontmatter(rawContent: string): PreviewFrontmatter {
+  if (!/^---\r?\n/.test(rawContent)) {
+    return {
+      hasFrontmatter: false,
+      metadata: null,
+      contentWithoutFrontmatter: rawContent,
+      parseError: null,
+    };
+  }
+
+  const match = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
+  if (!match) {
+    return {
+      hasFrontmatter: true,
+      metadata: null,
+      contentWithoutFrontmatter: rawContent,
+      parseError: "Missing closing frontmatter delimiter",
+    };
+  }
+
+  const block = match[1];
+  const remaining = rawContent.slice(match[0].length);
+
+  try {
+    const parsed = yaml.load(block);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {
+        hasFrontmatter: true,
+        metadata: null,
+        contentWithoutFrontmatter: remaining,
+        parseError: "Frontmatter must be a YAML object",
+      };
+    }
+    return {
+      hasFrontmatter: true,
+      metadata: parsed as Record<string, unknown>,
+      contentWithoutFrontmatter: remaining,
+      parseError: null,
+    };
+  } catch (error) {
+    return {
+      hasFrontmatter: true,
+      metadata: null,
+      contentWithoutFrontmatter: remaining,
+      parseError: error instanceof Error ? error.message : "Failed to parse frontmatter",
+    };
+  }
+}
+
+function frontmatterSelectionEnd(rawContent: string): number {
+  const match = rawContent.match(/^---\r?\n[\s\S]*?\r?\n---(\r?\n|$)/);
+  if (!match) return 0;
+  return match[0].length;
+}
+
+function formatMetadataDate(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  const parsed = dateOnly.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return formatTimestamp(parsed, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function stringifyMetadataValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+      .join(", ");
+  }
+  return JSON.stringify(value);
+}
+
+function metadataFieldValue(metadata: Record<string, unknown>, key: string): unknown {
+  if (key in metadata) return metadata[key];
+  return null;
+}
+
+const metadataAliasMap: Record<string, string[]> = {
+  title: ["title"],
+  status: ["status"],
+  visibility: ["visibility"],
+  date: ["date", "created", "published", "publish_at"],
+  updated: ["updated", "modified", "lastmod", "updated_at"],
+  category: ["category", "categories"],
+  tags: ["tags", "tag", "keywords"],
+  authors: ["authors", "author"],
+  draft: ["draft"],
+};
+
+function findMetadataKey(metadata: Record<string, unknown>, canonicalKey: string): string | null {
+  const aliases = metadataAliasMap[canonicalKey] ?? [canonicalKey];
+  const normalized = new Map<string, string>();
+  for (const key of Object.keys(metadata)) normalized.set(key.toLowerCase(), key);
+  for (const alias of aliases) {
+    const matched = normalized.get(alias.toLowerCase());
+    if (matched) return matched;
+  }
+  return null;
+}
+
+function getMetadataValue(metadata: Record<string, unknown>, canonicalKey: string): unknown {
+  const resolved = findMetadataKey(metadata, canonicalKey);
+  if (!resolved) return null;
+  return metadata[resolved];
+}
+
+function normalizeMetadataTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((tag) => stringifyMetadataValue(tag)).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function NoteEditor({
+  noteId,
+  notesMetadataCollapsedDefault = false,
+}: {
+  noteId: string;
+  notesMetadataCollapsedDefault?: boolean;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [note, setNote] = useState<Note | null>(null);
@@ -208,7 +387,10 @@ export function NoteEditor({ noteId }: { noteId: string }) {
   const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [showMetadataAdvanced, setShowMetadataAdvanced] = useState(false);
+  const [isMetadataCollapsed, setIsMetadataCollapsed] = useState(notesMetadataCollapsedDefault);
 
   useEffect(() => {
     api.notes
@@ -231,6 +413,10 @@ export function NoteEditor({ noteId }: { noteId: string }) {
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [deleteConfirm]);
+
+  useEffect(() => {
+    setIsMetadataCollapsed(notesMetadataCollapsedDefault);
+  }, [notesMetadataCollapsedDefault]);
 
   const save = useCallback(
     async (t: string, c: string) => {
@@ -350,6 +536,51 @@ export function NoteEditor({ noteId }: { noteId: string }) {
 
   const createdAt = note?.createdAt ? new Date(note.createdAt) : null;
   const updatedAt = note?.updatedAt ? new Date(note.updatedAt) : null;
+  const previewFrontmatter = useMemo(() => parsePreviewFrontmatter(content), [content]);
+  const previewMetadata = previewFrontmatter.metadata ?? note?.metadata ?? null;
+  const previewContent = previewFrontmatter.hasFrontmatter
+    ? previewFrontmatter.contentWithoutFrontmatter
+    : content;
+  const previewTagValues = useMemo(
+    () => (previewMetadata ? normalizeMetadataTags(getMetadataValue(previewMetadata, "tags")) : []),
+    [previewMetadata],
+  );
+
+  const metadataAdvancedEntries = useMemo(() => {
+    if (!previewMetadata) return [];
+    const consumedKeys = new Set<string>();
+    for (const primaryKey of metadataPrimaryFields) {
+      const resolved = findMetadataKey(previewMetadata, primaryKey);
+      if (resolved) consumedKeys.add(resolved);
+    }
+    return Object.entries(previewMetadata).filter(([key]) => !consumedKeys.has(key));
+  }, [previewMetadata]);
+
+  const openEditorAtFrontmatter = useCallback(() => {
+    setMode("edit");
+    setTimeout(() => {
+      const textarea = contentRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const selectionEnd = frontmatterSelectionEnd(content);
+      textarea.setSelectionRange(0, selectionEnd);
+    }, 0);
+  }, [content]);
+
+  const insertFrontmatterTemplate = useCallback(() => {
+    const nextContent = /^---\r?\n/.test(content)
+      ? content
+      : `${DEFAULT_FRONTMATTER_TEMPLATE}\n\n${content}`.trimEnd();
+    handleChange(title, nextContent);
+    setMode("edit");
+    setTimeout(() => {
+      const textarea = contentRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const selectionEnd = frontmatterSelectionEnd(nextContent);
+      textarea.setSelectionRange(0, selectionEnd);
+    }, 0);
+  }, [content, title]);
 
   if (loading) {
     return (
@@ -521,13 +752,13 @@ export function NoteEditor({ noteId }: { noteId: string }) {
         <div className="space-y-4">
           {isPreview ? (
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 min-h-[420px] animate-fade-in-up shadow-sm text-neutral-700 dark:text-neutral-100">
-              {content ? (
+              {previewContent ? (
                 <Markdown
                   components={markdownComponents}
                   remarkPlugins={markdownRemarkPlugins}
                   rehypePlugins={markdownRehypePlugins}
                 >
-                  {content}
+                  {previewContent}
                 </Markdown>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[360px] text-center">
@@ -554,6 +785,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
           ) : (
             <div className="space-y-3">
               <textarea
+                ref={contentRef}
                 value={content}
                 onChange={(e) => handleChange(title, e.target.value)}
                 placeholder="Write your note in markdown..."
@@ -601,9 +833,188 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               </div>
             </div>
           </div>
+          {isPreview && (
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setIsMetadataCollapsed((collapsed) => !collapsed)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500"
+                >
+                  <IconChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${isMetadataCollapsed ? "-rotate-90" : "rotate-0"}`}
+                  />
+                  Metadata
+                </button>
+                <div className="flex items-center gap-2">
+                  {previewFrontmatter.hasFrontmatter ? (
+                    <button
+                      onClick={openEditorAtFrontmatter}
+                      className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
+                    >
+                      Edit metadata
+                    </button>
+                  ) : (
+                    <button
+                      onClick={insertFrontmatterTemplate}
+                      className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
+                    >
+                      Add metadata
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {!isMetadataCollapsed && previewFrontmatter.parseError && (
+                <div className="mt-3 rounded-xl border border-amber-300/70 dark:border-amber-500/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                  <p>Metadata parse error: {previewFrontmatter.parseError}</p>
+                  <button
+                    onClick={openEditorAtFrontmatter}
+                    className="mt-1 underline underline-offset-2"
+                  >
+                    Fix in Source
+                  </button>
+                </div>
+              )}
+
+              {!isMetadataCollapsed && !previewMetadata ? (
+                <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+                  No metadata
+                </p>
+              ) : null}
+
+              {!isMetadataCollapsed && previewMetadata ? (
+                <div className="mt-3 space-y-2 text-sm text-neutral-700 dark:text-neutral-200">
+                  {getMetadataValue(previewMetadata, "title") ? (
+                    <MetadataRow
+                      label="Title"
+                      value={stringifyMetadataValue(getMetadataValue(previewMetadata, "title"))}
+                    />
+                  ) : null}
+                  {(Boolean(getMetadataValue(previewMetadata, "status")) ||
+                    Boolean(getMetadataValue(previewMetadata, "visibility")) ||
+                    getMetadataValue(previewMetadata, "draft") === true) && (
+                    <MetadataValueRow label="Status">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {getMetadataValue(previewMetadata, "status") ? (
+                          <MetadataChip value={stringifyMetadataValue(getMetadataValue(previewMetadata, "status"))} />
+                        ) : null}
+                        {getMetadataValue(previewMetadata, "visibility") ? (
+                          <MetadataChip value={stringifyMetadataValue(getMetadataValue(previewMetadata, "visibility"))} />
+                        ) : null}
+                        {getMetadataValue(previewMetadata, "draft") === true ? (
+                          <MetadataChip value="draft" />
+                        ) : null}
+                      </div>
+                    </MetadataValueRow>
+                  )}
+                  {getMetadataValue(previewMetadata, "date") ? (
+                    <MetadataRow
+                      label="Date"
+                      value={
+                        formatMetadataDate(getMetadataValue(previewMetadata, "date")) ??
+                        stringifyMetadataValue(getMetadataValue(previewMetadata, "date"))
+                      }
+                    />
+                  ) : null}
+                  {getMetadataValue(previewMetadata, "updated") ? (
+                    <MetadataRow
+                      label="Updated"
+                      value={
+                        formatMetadataDate(getMetadataValue(previewMetadata, "updated")) ??
+                        stringifyMetadataValue(getMetadataValue(previewMetadata, "updated"))
+                      }
+                    />
+                  ) : null}
+                  {getMetadataValue(previewMetadata, "category") ? (
+                    <MetadataRow
+                      label="Category"
+                      value={stringifyMetadataValue(getMetadataValue(previewMetadata, "category"))}
+                    />
+                  ) : null}
+                  {previewTagValues.length > 0 ? (
+                    <MetadataValueRow label="Tags">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {previewTagValues.map((tag, index) => (
+                          <MetadataChip key={`${tag}-${index}`} value={stringifyMetadataValue(tag)} />
+                        ))}
+                      </div>
+                    </MetadataValueRow>
+                  ) : null}
+                  {getMetadataValue(previewMetadata, "authors") ? (
+                    <MetadataRow
+                      label="Authors"
+                      value={stringifyMetadataValue(getMetadataValue(previewMetadata, "authors"))}
+                    />
+                  ) : null}
+                  {metadataAdvancedEntries.length > 0 && (
+                    <div className="border-t border-neutral-200 dark:border-neutral-800 pt-2">
+                      <button
+                        onClick={() => setShowMetadataAdvanced((open) => !open)}
+                        className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+                      >
+                        <IconChevronDown
+                          className={`h-3.5 w-3.5 transition-transform ${showMetadataAdvanced ? "rotate-180" : ""}`}
+                        />
+                        Advanced
+                      </button>
+                      {showMetadataAdvanced && (
+                        <div className="mt-2 space-y-1">
+                          {metadataAdvancedEntries.map(([key, value]) => {
+                            const label = metadataAdvancedFields.includes(key as (typeof metadataAdvancedFields)[number])
+                              ? key
+                              : `${key} (other)`;
+                            return (
+                              <MetadataRow
+                                key={key}
+                                label={label}
+                                value={stringifyMetadataValue(value)}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </aside>
       </div>
     </div>
+  );
+}
+
+function MetadataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <MetadataValueRow label={label}>
+      <span className="break-words text-neutral-700 dark:text-neutral-200">{value || "—"}</span>
+    </MetadataValueRow>
+  );
+}
+
+function MetadataValueRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-x-3 gap-y-1">
+      <span className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+        {label}
+      </span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function MetadataChip({ value }: { value: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-neutral-200 dark:border-neutral-700 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:text-neutral-200">
+      {value}
+    </span>
   );
 }
 

@@ -24,12 +24,14 @@ export function NotesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const activeTag = searchParams.get("tag")?.trim().toLowerCase() || "";
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.notes.list({
         search: search || undefined,
+        tag: activeTag || undefined,
         page,
         limit: 20,
       });
@@ -43,7 +45,7 @@ export function NotesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, activeTag, page]);
 
   useEffect(() => {
     const timeout = setTimeout(fetchNotes, search ? 300 : 0);
@@ -53,7 +55,7 @@ export function NotesPage() {
   // Reset page on search change
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, activeTag]);
 
   // Listen for keyboard shortcut to create new note
   useEffect(() => {
@@ -123,6 +125,11 @@ export function NotesPage() {
             {!loading && notes.length > 0 && (
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                 <span className="font-medium">{notes.length}</span> note{notes.length !== 1 ? "s" : ""}
+              </p>
+            )}
+            {activeTag && (
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                Tag: <span className="font-medium text-neutral-600 dark:text-neutral-300">{activeTag}</span>
               </p>
             )}
           </div>

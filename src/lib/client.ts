@@ -47,8 +47,19 @@ export interface Note {
   userId: string;
   title: string;
   content: string | null;
+  metadata: Record<string, unknown> | null;
+  type: string | null;
+  folderId: string | null;
+  projectId: string | null;
+  dispatchDate: string | null;
+  hasRecurrence: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NoteTagSummary {
+  tag: string;
+  count: number;
 }
 
 export interface Dispatch {
@@ -128,6 +139,8 @@ export interface MePreferences {
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
+  showDispatchHelp?: boolean;
+  notesMetadataCollapsedDefault?: boolean;
   defaultStartNode?: DefaultStartNode;
 }
 
@@ -216,6 +229,7 @@ export class ApiError extends Error {
 
 export const TASKS_CHANGED_EVENT = "tasks:changed";
 export const PROJECTS_CHANGED_EVENT = "projects:changed";
+export const NOTES_CHANGED_EVENT = "notes:changed";
 
 function emitTasksChanged(detail: { action: "create" | "update" | "delete"; taskId?: string }) {
   if (typeof window === "undefined") return;
@@ -225,6 +239,11 @@ function emitTasksChanged(detail: { action: "create" | "update" | "delete"; task
 function emitProjectsChanged(detail: { action: "create" | "update" | "delete"; projectId?: string }) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PROJECTS_CHANGED_EVENT, { detail }));
+}
+
+function emitNotesChanged(detail: { action: "create" | "update" | "delete"; noteId?: string }) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(NOTES_CHANGED_EVENT, { detail }));
 }
 
 function sleep(ms: number): Promise<void> {
@@ -395,9 +414,23 @@ export const api = {
   },
 
   notes: {
-    list: (params?: { search?: string; page?: number; limit?: number }) =>
+    list: (params?: {
+      search?: string;
+      type?: string;
+      folderId?: string;
+      projectId?: string;
+      dispatchDate?: string;
+      tag?: string;
+      page?: number;
+      limit?: number;
+    }) =>
       request<Note[] | PaginatedResponse<Note>>(`/notes${qs({
         search: params?.search,
+        type: params?.type,
+        folderId: params?.folderId,
+        projectId: params?.projectId,
+        dispatchDate: params?.dispatchDate,
+        tag: params?.tag,
         page: params?.page?.toString(),
         limit: params?.limit?.toString(),
       })}`),
@@ -405,13 +438,24 @@ export const api = {
     get: (id: string) => request<Note>(`/notes/${id}`),
 
     create: (data: { title: string; content?: string }) =>
-      request<Note>("/notes", { method: "POST", body: JSON.stringify(data) }),
+      request<Note>("/notes", { method: "POST", body: JSON.stringify(data) }).then((note) => {
+        emitNotesChanged({ action: "create", noteId: note.id });
+        return note;
+      }),
 
     update: (id: string, data: { title?: string; content?: string }) =>
-      request<Note>(`/notes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      request<Note>(`/notes/${id}`, { method: "PUT", body: JSON.stringify(data) }).then((note) => {
+        emitNotesChanged({ action: "update", noteId: note.id });
+        return note;
+      }),
 
     delete: (id: string) =>
-      request<{ deleted: true }>(`/notes/${id}`, { method: "DELETE" }),
+      request<{ deleted: true }>(`/notes/${id}`, { method: "DELETE" }).then((result) => {
+        emitNotesChanged({ action: "delete", noteId: id });
+        return result;
+      }),
+
+    tags: () => request<NoteTagSummary[]>("/notes/tags"),
   },
 
   dispatches: {

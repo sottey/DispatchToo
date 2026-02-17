@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
-import { api, PROJECTS_CHANGED_EVENT, type ProjectWithStats } from "@/lib/client";
+import { api, NOTES_CHANGED_EVENT, PROJECTS_CHANGED_EVENT, type ProjectWithStats } from "@/lib/client";
 import { PROJECT_COLORS } from "@/lib/projects";
 import { BrandMark } from "@/components/BrandMark";
 import {
@@ -66,6 +66,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
     () => ({
       main: true,
       workspace: true,
+      tags: false,
       projects: true,
       account: true,
     }),
@@ -77,6 +78,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
     defaultSectionsOpen,
   );
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
+  const [tags, setTags] = useState<Array<{ tag: string; count: number }>>([]);
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -87,21 +89,41 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
     }
   }, []);
 
+  const fetchTags = useCallback(async () => {
+    try {
+      const data = await api.notes.tags();
+      setTags(data);
+    } catch {
+      setTags([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
 
   useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
+
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags, pathname]);
+
+  useEffect(() => {
     function handleRefresh() {
       fetchProjects();
+      fetchTags();
     }
     window.addEventListener("projects:refresh", handleRefresh);
     window.addEventListener(PROJECTS_CHANGED_EVENT, handleRefresh as EventListener);
+    window.addEventListener(NOTES_CHANGED_EVENT, handleRefresh as EventListener);
     return () => {
       window.removeEventListener("projects:refresh", handleRefresh);
       window.removeEventListener(PROJECTS_CHANGED_EVENT, handleRefresh as EventListener);
+      window.removeEventListener(NOTES_CHANGED_EVENT, handleRefresh as EventListener);
     };
-  }, [fetchProjects]);
+  }, [fetchProjects, fetchTags]);
 
   // Read collapsed state from localStorage on mount
   useEffect(() => {
@@ -155,6 +177,10 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   }, [pathname, searchParams]);
 
   const projectsRootActive = pathname.startsWith("/projects") && !currentProjectId;
+  const activeNotesTag = useMemo(() => {
+    if (!pathname.startsWith("/notes")) return "";
+    return searchParams.get("tag")?.trim().toLowerCase() ?? "";
+  }, [pathname, searchParams]);
   const workspaceNavItems = useMemo(() => {
     const items = [...WORKSPACE_NAV];
     if (session?.user?.assistantEnabled ?? true) {
@@ -365,6 +391,58 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
             </ul>
           )}
         </div>
+
+        {/* Tags section */}
+        {!collapsed && (
+          <div className="pt-3 border-t border-neutral-800/50">
+            <button
+              onClick={() => toggleSection("tags")}
+              className="flex items-center w-full mb-2 justify-between px-2"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                Tags
+              </span>
+              <IconChevronDown
+                className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
+                  sectionsOpen.tags ? "" : "-rotate-90"
+                }`}
+              />
+            </button>
+            {sectionsOpen.tags && (
+              <div className="px-1 pb-1">
+                <div className="flex flex-wrap gap-1.5">
+                  <Link
+                    href="/notes"
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
+                      pathname.startsWith("/notes") && !activeNotesTag
+                        ? "border-blue-500/60 bg-blue-500/20 text-blue-100"
+                        : "border-neutral-700/80 bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800/80 hover:text-neutral-100"
+                    }`}
+                  >
+                    All Notes
+                  </Link>
+                  {tags.map((entry) => (
+                    <Link
+                      key={entry.tag}
+                      href={`/notes?tag=${encodeURIComponent(entry.tag)}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
+                        activeNotesTag === entry.tag
+                          ? "border-blue-500/60 bg-blue-500/20 text-blue-100"
+                          : "border-neutral-700/80 bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800/80 hover:text-neutral-100"
+                      }`}
+                    >
+                      <span>{entry.tag}</span>
+                      <span className="text-[10px] text-neutral-500">{entry.count}</span>
+                    </Link>
+                  ))}
+                </div>
+                {tags.length === 0 && (
+                  <p className="px-1 py-1 text-xs text-neutral-600">No tags yet</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Projects section */}
         <div className="pt-3 border-t border-neutral-800/50">
@@ -594,7 +672,10 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                         </Link>
                       )}
                       <button
-                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        onClick={async () => {
+                          await signOut({ redirect: false });
+                          window.location.assign("/login");
+                        }}
                         title="Sign out"
                         aria-label="Sign out"
                         className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700/70 bg-neutral-900/50 text-neutral-400 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] hover:bg-neutral-800/80 hover:text-white transition-all active:scale-[0.97]"

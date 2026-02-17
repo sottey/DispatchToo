@@ -35,7 +35,6 @@ const DEFAULT_MODEL: Record<AIProvider, string> = {
   custom: "gpt-4o-mini",
 };
 
-const DISPATCH_HELP_PREF_KEY = "dispatch-show-help";
 const DEFAULT_START_NODE_OPTIONS: Array<{ value: DefaultStartNode; label: string }> = [
   { value: "dashboard", label: "Dashboard" },
   { value: "dispatch", label: "Dispatch" },
@@ -51,12 +50,16 @@ export function ProfilePreferences({
   showAdminQuickAccess = true,
   assistantEnabled = true,
   tasksTodayFocusDefault = false,
+  showDispatchHelpDefault = true,
+  notesMetadataCollapsedDefault = false,
   defaultStartNode = "dashboard",
 }: {
   isAdmin?: boolean;
   showAdminQuickAccess?: boolean;
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
+  showDispatchHelpDefault?: boolean;
+  notesMetadataCollapsedDefault?: boolean;
   defaultStartNode?: DefaultStartNode;
 }) {
   const { theme, toggleTheme } = useTheme();
@@ -67,10 +70,13 @@ export function ProfilePreferences({
   const [assistantVisible, setAssistantVisible] = useState(assistantEnabled);
   const [tasksTodayFocusByDefault, setTasksTodayFocusByDefault] = useState(tasksTodayFocusDefault);
   const [selectedStartNode, setSelectedStartNode] = useState<DefaultStartNode>(defaultStartNode);
-  const [showDispatchHelp, setShowDispatchHelp] = useState(true);
+  const [showDispatchHelpPanel, setShowDispatchHelpPanel] = useState(showDispatchHelpDefault);
+  const [notesMetadataCollapsedByDefault, setNotesMetadataCollapsedByDefault] = useState(notesMetadataCollapsedDefault);
   const [savingAdminButtonPref, setSavingAdminButtonPref] = useState(false);
   const [savingAssistantVisibility, setSavingAssistantVisibility] = useState(false);
   const [savingTasksTodayFocusDefault, setSavingTasksTodayFocusDefault] = useState(false);
+  const [savingDispatchHelpPanel, setSavingDispatchHelpPanel] = useState(false);
+  const [savingNotesMetadataCollapsedDefault, setSavingNotesMetadataCollapsedDefault] = useState(false);
   const [savingDefaultStartNode, setSavingDefaultStartNode] = useState(false);
 
   const [aiLoading, setAiLoading] = useState(true);
@@ -149,17 +155,6 @@ export function ProfilePreferences({
   useEffect(() => {
     void loadConfig();
   }, [loadConfig]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DISPATCH_HELP_PREF_KEY);
-      if (stored === "false") {
-        setShowDispatchHelp(false);
-      }
-    } catch {
-      // Ignore local preference read failures.
-    }
-  }, []);
 
   useEffect(() => {
     if (!activeConfig) return;
@@ -258,18 +253,33 @@ export function ProfilePreferences({
     }
   }
 
-  function handleToggleDispatchHelp() {
-    const next = !showDispatchHelp;
-    setShowDispatchHelp(next);
+  async function handleToggleDispatchHelp() {
+    const next = !showDispatchHelpPanel;
+    setShowDispatchHelpPanel(next);
+    setSavingDispatchHelpPanel(true);
     try {
-      localStorage.setItem(DISPATCH_HELP_PREF_KEY, String(next));
-      window.dispatchEvent(
-        new CustomEvent("dispatch:preferences-changed", {
-          detail: { showDispatchHelp: next },
-        }),
-      );
-    } catch {
-      // Ignore local preference write failures.
+      await api.me.updatePreferences({ showDispatchHelp: next });
+      await update();
+    } catch (error) {
+      setShowDispatchHelpPanel(!next);
+      toast.error(error instanceof Error ? error.message : "Failed to update Dispatch help preference");
+    } finally {
+      setSavingDispatchHelpPanel(false);
+    }
+  }
+
+  async function handleToggleNotesMetadataCollapsedDefault() {
+    const next = !notesMetadataCollapsedByDefault;
+    setNotesMetadataCollapsedByDefault(next);
+    setSavingNotesMetadataCollapsedDefault(true);
+    try {
+      await api.me.updatePreferences({ notesMetadataCollapsedDefault: next });
+      await update();
+    } catch (error) {
+      setNotesMetadataCollapsedByDefault(!next);
+      toast.error(error instanceof Error ? error.message : "Failed to update notes metadata preference");
+    } finally {
+      setSavingNotesMetadataCollapsedDefault(false);
     }
   }
 
@@ -359,7 +369,10 @@ export function ProfilePreferences({
             </p>
           </div>
           <button
-            onClick={() => signOut()}
+            onClick={async () => {
+              await signOut({ redirect: false });
+              window.location.assign("/login");
+            }}
             className="rounded-lg border border-red-200 dark:border-red-900/50 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all active:scale-95"
           >
             Sign Out
@@ -418,14 +431,34 @@ export function ProfilePreferences({
           </div>
           <button
             onClick={handleToggleDispatchHelp}
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
-              showDispatchHelp
+            disabled={savingDispatchHelpPanel}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 disabled:opacity-60 ${
+              showDispatchHelpPanel
                 ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300"
                 : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
             }`}
           >
-            {showDispatchHelp ? "Shown" : "Hidden"}
+            {showDispatchHelpPanel ? "Shown" : "Hidden"}
           </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Notes Metadata Default</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              Open note preview metadata panel collapsed by default.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+            <input
+              type="checkbox"
+              checked={notesMetadataCollapsedByDefault}
+              onChange={handleToggleNotesMetadataCollapsedDefault}
+              disabled={savingNotesMetadataCollapsedDefault}
+              className="h-4 w-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800"
+            />
+            Collapsed
+          </label>
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">

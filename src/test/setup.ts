@@ -11,6 +11,8 @@ type MockSession = {
     showAdminQuickAccess?: boolean;
     assistantEnabled?: boolean;
     tasksTodayFocusDefault?: boolean;
+    showDispatchHelp?: boolean;
+    notesMetadataCollapsedDefault?: boolean;
     defaultStartNode?: "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
   };
 } | null;

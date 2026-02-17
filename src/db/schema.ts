@@ -26,6 +26,12 @@ export const users = sqliteTable("user", {
   tasksTodayFocusDefault: integer("tasksTodayFocusDefault", { mode: "boolean" })
     .notNull()
     .default(false),
+  showDispatchHelp: integer("showDispatchHelp", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notesMetadataCollapsedDefault: integer("notesMetadataCollapsedDefault", { mode: "boolean" })
+    .notNull()
+    .default(false),
   defaultStartNode: text("defaultStartNode", {
     enum: ["dashboard", "dispatch", "inbox", "tasks", "notes", "insights", "projects"],
   })
@@ -178,6 +184,12 @@ export const notes = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     content: text("content"),
+    metadata: text("metadata"),
+    type: text("type"),
+    folderId: text("folderId"),
+    projectId: text("projectId").references(() => projects.id, { onDelete: "set null" }),
+    dispatchDate: text("dispatchDate"),
+    hasRecurrence: integer("hasRecurrence", { mode: "boolean" }).notNull().default(false),
     deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()
@@ -186,7 +198,14 @@ export const notes = sqliteTable(
       .notNull()
       .default(sql`(current_timestamp)`),
   },
-  (table) => [index("note_userId_idx").on(table.userId)]
+  (table) => [
+    index("note_userId_idx").on(table.userId),
+    index("note_userId_type_idx").on(table.userId, table.type),
+    index("note_userId_folderId_idx").on(table.userId, table.folderId),
+    index("note_userId_projectId_idx").on(table.userId, table.projectId),
+    index("note_userId_dispatchDate_idx").on(table.userId, table.dispatchDate),
+    index("note_userId_hasRecurrence_idx").on(table.userId, table.hasRecurrence),
+  ]
 );
 
 export const apiKeys = sqliteTable(

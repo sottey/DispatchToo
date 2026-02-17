@@ -22,6 +22,8 @@ const TEST_USER = {
   showAdminQuickAccess: true,
   assistantEnabled: true,
   tasksTodayFocusDefault: false,
+  showDispatchHelp: true,
+  notesMetadataCollapsedDefault: false,
   defaultStartNode: "dashboard" as const,
 };
 
@@ -64,6 +66,8 @@ describe("Me API", () => {
       showAdminQuickAccess: false,
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
+      showDispatchHelp: true,
+      notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
 
@@ -85,6 +89,8 @@ describe("Me API", () => {
       showAdminQuickAccess: true,
       assistantEnabled: false,
       tasksTodayFocusDefault: false,
+      showDispatchHelp: true,
+      notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
 
@@ -106,6 +112,8 @@ describe("Me API", () => {
       showAdminQuickAccess: true,
       assistantEnabled: true,
       tasksTodayFocusDefault: true,
+      showDispatchHelp: true,
+      notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
 
@@ -135,6 +143,8 @@ describe("Me API", () => {
       showAdminQuickAccess: true,
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
+      showDispatchHelp: true,
+      notesMetadataCollapsedDefault: false,
       defaultStartNode: "projects",
     });
 
@@ -152,6 +162,38 @@ describe("Me API", () => {
       {},
     );
     expect(res.status).toBe(400);
+  });
+
+  it("PUT updates showDispatchHelp to false", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { showDispatchHelp: false }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: false,
+      showDispatchHelp: false,
+      notesMetadataCollapsedDefault: false,
+      defaultStartNode: "dashboard",
+    });
+  });
+
+  it("PUT updates notesMetadataCollapsedDefault to true", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { notesMetadataCollapsedDefault: true }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: false,
+      showDispatchHelp: true,
+      notesMetadataCollapsedDefault: true,
+      defaultStartNode: "dashboard",
+    });
   });
 
   it("PUT requires authentication", async () => {

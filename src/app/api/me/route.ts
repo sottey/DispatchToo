@@ -25,7 +25,14 @@ export const PUT = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { showAdminQuickAccess, assistantEnabled, tasksTodayFocusDefault, defaultStartNode } = body as Record<string, unknown>;
+  const {
+    showAdminQuickAccess,
+    assistantEnabled,
+    tasksTodayFocusDefault,
+    showDispatchHelp,
+    notesMetadataCollapsedDefault,
+    defaultStartNode,
+  } = body as Record<string, unknown>;
 
   if (showAdminQuickAccess !== undefined && typeof showAdminQuickAccess !== "boolean") {
     return errorResponse("showAdminQuickAccess must be a boolean", 400);
@@ -37,6 +44,17 @@ export const PUT = withAuth(async (req, session) => {
 
   if (tasksTodayFocusDefault !== undefined && typeof tasksTodayFocusDefault !== "boolean") {
     return errorResponse("tasksTodayFocusDefault must be a boolean", 400);
+  }
+
+  if (showDispatchHelp !== undefined && typeof showDispatchHelp !== "boolean") {
+    return errorResponse("showDispatchHelp must be a boolean", 400);
+  }
+
+  if (
+    notesMetadataCollapsedDefault !== undefined &&
+    typeof notesMetadataCollapsedDefault !== "boolean"
+  ) {
+    return errorResponse("notesMetadataCollapsedDefault must be a boolean", 400);
   }
 
   if (
@@ -53,6 +71,8 @@ export const PUT = withAuth(async (req, session) => {
     showAdminQuickAccess === undefined &&
     assistantEnabled === undefined &&
     tasksTodayFocusDefault === undefined &&
+    showDispatchHelp === undefined &&
+    notesMetadataCollapsedDefault === undefined &&
     defaultStartNode === undefined
   ) {
     return errorResponse("At least one preference field is required", 400);
@@ -62,6 +82,10 @@ export const PUT = withAuth(async (req, session) => {
   if (showAdminQuickAccess !== undefined) updates.showAdminQuickAccess = showAdminQuickAccess;
   if (assistantEnabled !== undefined) updates.assistantEnabled = assistantEnabled;
   if (tasksTodayFocusDefault !== undefined) updates.tasksTodayFocusDefault = tasksTodayFocusDefault;
+  if (showDispatchHelp !== undefined) updates.showDispatchHelp = showDispatchHelp;
+  if (notesMetadataCollapsedDefault !== undefined) {
+    updates.notesMetadataCollapsedDefault = notesMetadataCollapsedDefault;
+  }
   if (defaultStartNode !== undefined) updates.defaultStartNode = defaultStartNode;
 
   const [updated] = await db
@@ -72,6 +96,8 @@ export const PUT = withAuth(async (req, session) => {
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      showDispatchHelp: users.showDispatchHelp,
+      notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     });
 
@@ -82,6 +108,12 @@ export const PUT = withAuth(async (req, session) => {
       updated?.assistantEnabled ?? (assistantEnabled as boolean | undefined) ?? true,
     tasksTodayFocusDefault:
       updated?.tasksTodayFocusDefault ?? (tasksTodayFocusDefault as boolean | undefined) ?? false,
+    showDispatchHelp:
+      updated?.showDispatchHelp ?? (showDispatchHelp as boolean | undefined) ?? true,
+    notesMetadataCollapsedDefault:
+      updated?.notesMetadataCollapsedDefault ??
+      (notesMetadataCollapsedDefault as boolean | undefined) ??
+      false,
     defaultStartNode:
       updated?.defaultStartNode ?? (defaultStartNode as string | undefined) ?? "dashboard",
   });

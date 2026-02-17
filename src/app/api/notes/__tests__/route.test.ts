@@ -90,6 +90,81 @@ describe("Notes API", () => {
       const data = await res.json();
       expect(data.title).toBe("Full note");
       expect(data.content).toBe("# Hello\n\nSome markdown content");
+      expect(data.metadata).toBeNull();
+    });
+
+    it("parses and stores frontmatter metadata", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Frontmatter note",
+          content: `---
+type: dispatch
+tags:
+  - Planning
+  - weekly
+---
+Body`,
+        }),
+        {}
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.type).toBe("dispatch");
+      expect(data.hasRecurrence).toBe(false);
+      expect(data.metadata?.type).toBe("dispatch");
+      expect(data.metadata?.tags).toEqual(["planning", "weekly"]);
+    });
+
+    it("parses and stores frontmatter metadata with CRLF line endings", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Frontmatter note CRLF",
+          content: "---\r\ntype: dispatch\r\ntags:\r\n  - Planning\r\n  - weekly\r\n---\r\nBody",
+        }),
+        {}
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.type).toBe("dispatch");
+      expect(data.metadata?.tags).toEqual(["planning", "weekly"]);
+    });
+
+    it("rejects malformed frontmatter", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Broken FM",
+          content: `---
+type: dispatch
+tags: [a
+---
+Body`,
+        }),
+        {}
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid frontmatter");
+      expect(Array.isArray(data.details)).toBe(true);
+    });
+
+    it("rejects recurrence in note frontmatter", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Recurrence not supported",
+          content: `---
+recurrence:
+  kind: weekly
+  interval: 1
+  timezone: America/New_York
+---
+Body`,
+        }),
+        {}
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid frontmatter");
+      expect(data.details.some((item: { path: string }) => item.path === "recurrence")).toBe(true);
     });
 
     it("trims whitespace from title", async () => {
@@ -217,6 +292,36 @@ describe("Notes API", () => {
       expect(data).toHaveLength(3);
       expect(data.every((n: { userId: string }) => n.userId === TEST_USER.id)).toBe(true);
     });
+
+    it("filters by type and tag", async () => {
+      await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Typed note",
+          content: `---
+type: meeting
+tags: [planning]
+---
+Body`,
+        }),
+        {}
+      );
+
+      const typeRes = await GET(
+        new Request("http://localhost/api/notes?type=meeting"),
+        {}
+      );
+      const typeData = await typeRes.json();
+      expect(typeData).toHaveLength(1);
+      expect(typeData[0].type).toBe("meeting");
+
+      const tagRes = await GET(
+        new Request("http://localhost/api/notes?tag=planning"),
+        {}
+      );
+      const tagData = await tagRes.json();
+      expect(tagData).toHaveLength(1);
+      expect(tagData[0].title).toBe("Typed note");
+    });
   });
 
   // --- GET /api/notes/[id] ---
@@ -313,6 +418,32 @@ describe("Notes API", () => {
       const data = await res.json();
       expect(data.title).toBe("Keep this");
       expect(data.content).toBe("Updated");
+    });
+
+    it("updates frontmatter-derived metadata when content changes", async () => {
+      const createRes = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Meta change",
+          content: "No frontmatter",
+        }),
+        {}
+      );
+      const created = await createRes.json();
+
+      const res = await PUT(
+        jsonReq(`http://localhost/api/notes/${created.id}`, "PUT", {
+          content: `---
+type: journal
+tags: [reflection]
+---
+Body`,
+        }),
+        ctx(created.id)
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.type).toBe("journal");
+      expect(data.metadata?.tags).toEqual(["reflection"]);
     });
 
     it("updates updatedAt timestamp", async () => {

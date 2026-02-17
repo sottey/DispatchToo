@@ -43,6 +43,8 @@ async function getUserAccess(
   showAdminQuickAccess: boolean;
   assistantEnabled: boolean;
   tasksTodayFocusDefault: boolean;
+  showDispatchHelp: boolean;
+  notesMetadataCollapsedDefault: boolean;
   defaultStartNode: DefaultStartNode;
 } | null> {
   ensureAuthDatabaseReady();
@@ -53,6 +55,8 @@ async function getUserAccess(
       showAdminQuickAccess: users.showAdminQuickAccess,
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+      showDispatchHelp: users.showDispatchHelp,
+      notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     })
     .from(users)
@@ -69,6 +73,8 @@ async function getUserAccess(
     showAdminQuickAccess: dbUser.showAdminQuickAccess ?? true,
     assistantEnabled: dbUser.assistantEnabled ?? true,
     tasksTodayFocusDefault: dbUser.tasksTodayFocusDefault ?? false,
+    showDispatchHelp: dbUser.showDispatchHelp ?? true,
+    notesMetadataCollapsedDefault: dbUser.notesMetadataCollapsedDefault ?? false,
     defaultStartNode: (dbUser.defaultStartNode as DefaultStartNode | null) ?? "dashboard",
   };
 }
@@ -114,6 +120,8 @@ providers.push(
         showAdminQuickAccess: user.showAdminQuickAccess ?? true,
         assistantEnabled: user.assistantEnabled ?? true,
         tasksTodayFocusDefault: user.tasksTodayFocusDefault ?? false,
+        showDispatchHelp: user.showDispatchHelp ?? true,
+        notesMetadataCollapsedDefault: user.notesMetadataCollapsedDefault ?? false,
         defaultStartNode: (user.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard",
       };
     },
@@ -208,6 +216,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             delete token.showAdminQuickAccess;
             delete token.assistantEnabled;
             delete token.tasksTodayFocusDefault;
+            delete token.showDispatchHelp;
+            delete token.notesMetadataCollapsedDefault;
             delete token.defaultStartNode;
             return token;
           }
@@ -216,6 +226,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.showAdminQuickAccess = access.showAdminQuickAccess;
           token.assistantEnabled = access.assistantEnabled;
           token.tasksTodayFocusDefault = access.tasksTodayFocusDefault;
+          token.showDispatchHelp = access.showDispatchHelp;
+          token.notesMetadataCollapsedDefault = access.notesMetadataCollapsedDefault;
           token.defaultStartNode = access.defaultStartNode;
         } catch (error) {
           // Avoid invalidating the active session during transient rekey transitions.
@@ -225,6 +237,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
           token.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
           token.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
+          token.showDispatchHelp = (token.showDispatchHelp as boolean | undefined) ?? true;
+          token.notesMetadataCollapsedDefault =
+            (token.notesMetadataCollapsedDefault as boolean | undefined) ?? false;
           token.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";
         }
       }
@@ -239,6 +254,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
         session.user.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
         session.user.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
+        session.user.showDispatchHelp = (token.showDispatchHelp as boolean | undefined) ?? true;
+        session.user.notesMetadataCollapsedDefault =
+          (token.notesMetadataCollapsedDefault as boolean | undefined) ?? false;
         session.user.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";
       }
       return session;

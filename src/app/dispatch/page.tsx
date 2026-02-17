@@ -8,5 +8,5 @@ export default async function Dispatch() {
     redirect("/login");
   }
 
-  return <DispatchPage />;
+  return <DispatchPage showDispatchHelpDefault={session.user.showDispatchHelp ?? true} />;
 }

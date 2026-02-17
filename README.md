@@ -88,6 +88,41 @@ Task line behavior:
 - `{{date:...}}` placeholders render from dispatch date (supports `YYYY`, `MM`, `DD`).
 - A trailing `>YYYY-MM-DD` sets `dueDate` (must be at the end of the task line).
 
+## Note Frontmatter (Metadata)
+
+Notes support optional YAML frontmatter for structured metadata and filtering.
+
+Format (must be at the top of note content):
+
+```md
+---
+type: meeting
+tags: [planning, weekly]
+projectId: project_ops
+dispatchDate: 2026-02-16
+---
+# Weekly Planning
+```
+
+Behavior:
+
+- Frontmatter is validated on note create/update (`POST /api/notes`, `PUT /api/notes/{id}`).
+- Invalid frontmatter returns `400` with `error: "Invalid frontmatter"` and `details`.
+- Parsed metadata is returned on note responses under `metadata`.
+- In note `Preview` mode, raw frontmatter is hidden from rendered markdown output.
+- `Preview` mode shows a read-only `Metadata` panel with key fields (for example: title, status, visibility, date, tags, authors) and a collapsible advanced section for remaining keys.
+- `Preview` mode provides:
+  - `Edit metadata` (switches to source editing and selects frontmatter block)
+  - `Add metadata` (inserts a frontmatter template when none exists)
+  - `Fix in Source` when frontmatter parsing fails in preview
+
+Notes API filters:
+
+- `GET /api/notes?search=planning`
+- `GET /api/notes?type=meeting`
+- `GET /api/notes?tag=weekly`
+- `GET /api/notes?projectId=project_ops&dispatchDate=2026-02-16`
+
 ## Tech Stack
 
 <p align="center">

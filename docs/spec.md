@@ -48,7 +48,7 @@ Dispatch is a personal, locally-hosted web application for managing tasks, notes
 
 ### Domain Tables
 - **tasks** — `id`, `userId`, `projectId?`, `title`, `description?`, `status` (open/in_progress/done), `priority` (low/medium/high), `dueDate?`, `deletedAt?`, `createdAt`, `updatedAt`. Indexed on userId, status, priority, projectId.
-- **notes** — `id`, `userId`, `title`, `content?`, `deletedAt?`, `createdAt`, `updatedAt`. Indexed on userId.
+- **notes** — `id`, `userId`, `title`, `content?`, `metadata?` (JSON string), `type?`, `folderId?`, `projectId?`, `dispatchDate?`, `hasRecurrence`, `deletedAt?`, `createdAt`, `updatedAt`. Indexed on userId, userId+type, userId+folderId, userId+projectId, userId+dispatchDate, userId+hasRecurrence.
 - **projects** — `id`, `userId`, `name`, `description?`, `status` (active/paused/completed), `color`, `deletedAt?`, `createdAt`, `updatedAt`. Indexed on userId, status. Six color options: blue, emerald, amber, rose, violet, slate.
 - **dispatches** — `id`, `userId`, `date` (YYYY-MM-DD, unique per user per day), `summary?`, `finalized` (boolean), `createdAt`, `updatedAt`. Indexed on userId+date.
 - **dispatchTasks** — `dispatchId`, `taskId`. Composite PK join table.
@@ -79,7 +79,7 @@ Dispatch is a personal, locally-hosted web application for managing tasks, notes
 | Resource    | List/Create            | Get/Update/Delete           | Extras                                                    |
 | ----------- | ---------------------- | --------------------------- | --------------------------------------------------------- |
 | Tasks       | `/api/tasks`           | `/api/tasks/[id]`           | Filters: status, priority, projectId                      |
-| Notes       | `/api/notes`           | `/api/notes/[id]`           | Filter: search (title)                                    |
+| Notes       | `/api/notes`           | `/api/notes/[id]`           | Filters: search, type, folderId, projectId, dispatchDate, tag |
 | Projects    | `/api/projects`        | `/api/projects/[id]`        | `/api/projects/[id]/tasks`, `?include=stats`              |
 | Dispatches  | `/api/dispatches`      | `/api/dispatches/[id]`      | `.../tasks`, `.../complete`, `.../unfinalize`, `/calendar` |
 | Recycle Bin | `/api/recycle-bin`     | --                          | POST with action: restore / delete                        |
@@ -116,6 +116,41 @@ Dispatch is a personal, locally-hosted web application for managing tasks, notes
   - Markdown checkbox format `- [ ] ...`
   - Date placeholder rendering: `{{date:YYYY-MM-DD}}` (`YYYY`, `MM`, `DD`)
   - Trailing due-date suffix: `>YYYY-MM-DD` (sets `task.dueDate`)
+
+### Note Frontmatter Metadata
+
+- Notes support optional YAML frontmatter when content starts at byte 0 with:
+  - `---`
+  - YAML key/value block
+  - `---`
+- Frontmatter is validated on `POST /api/notes` and `PUT /api/notes/[id]`.
+- Invalid YAML or invalid schema returns `400` with:
+  - `error: "Invalid frontmatter"`
+  - `details: [{ path, message }]`
+- Known keys are normalized and persisted to note metadata columns + JSON metadata.
+- Unknown keys are preserved in metadata JSON and ignored by app logic.
+- Notes UI (`/notes/[id]`) preview behavior:
+  - Raw frontmatter is not rendered in markdown preview output.
+  - A read-only `Metadata` panel is shown above preview content.
+  - `Edit metadata` switches to source mode and selects the frontmatter block.
+  - `Add metadata` inserts a frontmatter template if none exists.
+  - Invalid/partial frontmatter in preview shows a parse warning with `Fix in Source`.
+  - Less common keys are shown under a collapsible `Advanced` section; unknown keys are labeled as other fields.
+
+Supported frontmatter keys:
+
+- `type`: `template | journal | meeting | reference | dispatch`
+- `tags`: string array (normalized lowercase, unique)
+- `status`: `active | archived | draft`
+- `folderId`: string
+- `projectId`: string
+- `dispatchDate`: `YYYY-MM-DD`
+- `dueDate`: `YYYY-MM-DD`
+- `pin`: boolean
+- `reviewIntervalDays`: integer `1..365`
+- `source`: `manual | dispatch | import | google-calendar`
+- `sourceId`: string
+- `aliases`: string array (unique)
 
 ## Personal Assistant (Beta) + MCP
 
