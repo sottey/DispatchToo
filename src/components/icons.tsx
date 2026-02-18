@@ -54,6 +54,14 @@ export function IconFolder({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
+export function IconTag({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3.57a2.25 2.25 0 0 0-1.591-.659H4.5A2.25 2.25 0 0 0 2.25 5.16v3.477c0 .597.237 1.17.659 1.591l8.698 8.698a2.25 2.25 0 0 0 3.182 0l4.137-4.137a2.25 2.25 0 0 0 0-3.182L9.568 3.57ZM6.75 7.5h.008v.008H6.75V7.5Z" />
+    </svg>
+  );
+}
+
 export function IconSearch({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

@@ -15,6 +15,7 @@ import {
   IconCheckCircle,
   IconDocument,
   IconFolder,
+  IconTag,
   IconSearch,
   IconChevronDown,
   IconSignOut,
@@ -393,56 +394,74 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
         </div>
 
         {/* Tags section */}
-        {!collapsed && (
-          <div className="pt-3 border-t border-neutral-800/50">
-            <button
-              onClick={() => toggleSection("tags")}
-              className="flex items-center w-full mb-2 justify-between px-2"
-            >
-              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
-                Tags
-              </span>
-              <IconChevronDown
-                className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
-                  sectionsOpen.tags ? "" : "-rotate-90"
-                }`}
-              />
-            </button>
-            {sectionsOpen.tags && (
-              <div className="px-1 pb-1">
-                <div className="flex flex-wrap gap-1.5">
-                  <Link
-                    href="/notes"
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
-                      pathname.startsWith("/notes") && !activeNotesTag
-                        ? "border-blue-500/60 bg-blue-500/20 text-blue-100"
-                        : "border-neutral-700/80 bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800/80 hover:text-neutral-100"
-                    }`}
-                  >
-                    All Notes
-                  </Link>
-                  {tags.map((entry) => (
+        <div className="pt-3 border-t border-neutral-800/50">
+          {!collapsed ? (
+            <>
+              <button
+                onClick={() => toggleSection("tags")}
+                className="flex items-center w-full mb-2 justify-between px-2"
+              >
+                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap">
+                  Tags
+                </span>
+                <IconChevronDown
+                  className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
+                    sectionsOpen.tags ? "" : "-rotate-90"
+                  }`}
+                />
+              </button>
+              {sectionsOpen.tags && (
+                <div className="px-1 pb-1">
+                  <div className="flex flex-wrap gap-1.5">
                     <Link
-                      key={entry.tag}
-                      href={`/notes?tag=${encodeURIComponent(entry.tag)}`}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
-                        activeNotesTag === entry.tag
+                      href="/notes"
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
+                        pathname.startsWith("/notes") && !activeNotesTag
                           ? "border-blue-500/60 bg-blue-500/20 text-blue-100"
                           : "border-neutral-700/80 bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800/80 hover:text-neutral-100"
                       }`}
                     >
-                      <span>{entry.tag}</span>
-                      <span className="text-[10px] text-neutral-500">{entry.count}</span>
+                      All Notes
                     </Link>
-                  ))}
+                    {tags.map((entry) => (
+                      <Link
+                        key={entry.tag}
+                        href={`/notes?tag=${encodeURIComponent(entry.tag)}`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all ${
+                          activeNotesTag === entry.tag
+                            ? "border-blue-500/60 bg-blue-500/20 text-blue-100"
+                            : "border-neutral-700/80 bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800/80 hover:text-neutral-100"
+                        }`}
+                      >
+                        <span>{entry.tag}</span>
+                        <span className="text-[10px] text-neutral-500">{entry.count}</span>
+                      </Link>
+                    ))}
+                  </div>
+                  {tags.length === 0 && (
+                    <p className="px-1 py-1 text-xs text-neutral-600">No tags yet</p>
+                  )}
                 </div>
-                {tags.length === 0 && (
-                  <p className="px-1 py-1 text-xs text-neutral-600">No tags yet</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          ) : (
+            <ul className="space-y-0.5">
+              <li>
+                <Link
+                  href="/notes"
+                  title="Tags"
+                  className={`group/nav flex items-center rounded-lg py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                    pathname.startsWith("/notes")
+                      ? "bg-neutral-800/60 text-white"
+                      : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
+                  } justify-center`}
+                >
+                  <IconTag className="w-5 h-5 flex-shrink-0" />
+                </Link>
+              </li>
+            </ul>
+          )}
+        </div>
 
         {/* Projects section */}
         <div className="pt-3 border-t border-neutral-800/50">

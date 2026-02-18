@@ -2,6 +2,9 @@
   "name": "dispatch",
   "version": "0.4.0",
   "private": true,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "concurrently -k -n NEXT,MCP -c cyan,magenta \"npm run next:dev\" \"npm run mcp:dev\"",
     "next:dev": "next dev -p 8082",
