@@ -183,6 +183,12 @@ describe("Dispatches API", () => {
             "{{if:day=weekend}}",
             "- [ ] Weekend-only task",
             "{{endif}}",
+            "{{if:day=everyday}}",
+            "- [ ] Daily standup",
+            "{{endif}}",
+            "{{if:day=weekday,weekend}}",
+            "- [ ] Any-day task",
+            "{{endif}}",
             "{{if:dom=14}}",
             "- [ ] Mid-month check >{{date:YYYY-MM-DD}}",
             "{{endif}}",
@@ -216,6 +222,8 @@ describe("Dispatches API", () => {
 
       expect(linkedRows.map((row) => row.title).sort()).toEqual([
         "Anniversary reminder",
+        "Any-day task",
+        "Daily standup",
         "Mid-month check",
         "Multi-day task",
         "Weeding #home +home",

@@ -208,6 +208,7 @@ function matchesDayCondition(value: string, date: Date): boolean {
   const isWeekday = day !== "sat" && day !== "sun";
 
   return tokens.some((token) => {
+    if (token === "everyday") return true;
     if (token === "weekday") return isWeekday;
     if (token === "weekend") return !isWeekday;
     const normalized = normalizeDayToken(token);
