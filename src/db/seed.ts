@@ -126,7 +126,7 @@ async function seed() {
     },
     {
       title: "Debugging Notes",
-      content: `## OAuth Redirect Issue\n\nProblem: After GitHub login, user lands on /api/auth/callback instead of /\n\nRoot cause: \`NEXTAUTH_URL\` not set in .env.local\n\nFix: Added \`NEXTAUTH_URL=http://localhost:3000\` to .env.local`,
+      content: `## OAuth Redirect Issue\n\nProblem: After GitHub login, user lands on /api/auth/callback instead of /\n\nRoot cause: \`NEXTAUTH_URL\` not set in .env.local\n\nFix: Added \`NEXTAUTH_URL=http://localhost:8082\` to .env.local`,
     },
     {
       title: "Weekly Review Template",

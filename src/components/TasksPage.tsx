@@ -27,6 +27,20 @@ const PRIORITY_ORDER: Record<TaskPriority, number> = {
 
 const COMPLETE_DISMISS_MS = 420;
 
+export function applyTodayFocusScope(tasks: Task[], todayFocusOnly: boolean, today: string): Task[] {
+  if (!todayFocusOnly) return tasks;
+  return tasks.filter((task) => Boolean(task.dueDate) && task.dueDate! <= today);
+}
+
+export function applyCompletedVisibility(
+  tasks: Task[],
+  showCompleted: boolean,
+  completingIds: string[],
+): Task[] {
+  if (showCompleted) return tasks;
+  return tasks.filter((task) => task.status !== "done" || completingIds.includes(task.id));
+}
+
 export function TasksPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -186,13 +200,9 @@ export function TasksPage() {
   }, [statusFilter]);
 
   const today = todayDateKey();
-  const todayScopedTasks = todayFocusOnly
-    ? tasks.filter((task) => Boolean(task.dueDate) && task.dueDate! <= today)
-    : tasks;
+  const todayScopedTasks = applyTodayFocusScope(tasks, todayFocusOnly, today);
 
-  const filteredTasks = showCompleted
-    ? todayScopedTasks
-    : todayScopedTasks.filter((task) => task.status !== "done" || completingIds.includes(task.id));
+  const filteredTasks = applyCompletedVisibility(todayScopedTasks, showCompleted, completingIds);
 
   const sorted = [...filteredTasks].sort((a, b) => {
     if (sortBy === "dueDate") {

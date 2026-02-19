@@ -16,7 +16,7 @@ Dispatch is a locally-hosted personal web application built with Next.js (App Ro
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (http://localhost:3000)
+npm run dev          # Start dev server (http://localhost:8082)
 npm run build        # Production build
 npm run start        # Start production server
 npm run lint         # ESLint

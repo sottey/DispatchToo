@@ -8,7 +8,7 @@ import { registerSearchTool } from "@/mcp-server/tools/search";
 import { registerTaskTools } from "@/mcp-server/tools/tasks";
 
 const MCP_PORT = Number(process.env.MCP_PORT || 3001);
-const ALLOWED_ORIGINS = new Set(["http://localhost:3000", "http://127.0.0.1:3000"]);
+const ALLOWED_ORIGINS = new Set(["http://localhost:8082", "http://127.0.0.1:8082"]);
 
 function createDispatchMcpServer() {
   const server = new McpServer(

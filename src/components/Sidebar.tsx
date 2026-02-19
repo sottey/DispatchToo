@@ -55,6 +55,30 @@ const WORKSPACE_NAV: NavItem[] = [
   { href: "/recycle-bin", label: "Recycle Bin", icon: IconTrash },
 ];
 
+export const SIDEBAR_DEFAULT_SECTIONS_OPEN = {
+  main: true,
+  workspace: true,
+  tags: false,
+  projects: true,
+  account: true,
+} as const;
+
+export function parseSidebarSectionsState(
+  sectionState: string | null,
+  defaults: Record<string, boolean> = SIDEBAR_DEFAULT_SECTIONS_OPEN,
+): Record<string, boolean> {
+  if (!sectionState) return defaults;
+  try {
+    const parsed = JSON.parse(sectionState) as Record<string, boolean>;
+    return {
+      ...defaults,
+      ...parsed,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -64,13 +88,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.4.0";
 
   const defaultSectionsOpen = useMemo(
-    () => ({
-      main: true,
-      workspace: true,
-      tags: false,
-      projects: true,
-      account: true,
-    }),
+    () => ({ ...SIDEBAR_DEFAULT_SECTIONS_OPEN }),
     [],
   );
 
@@ -132,18 +150,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
     if (stored === "true") setCollapsed(true);
 
     const sectionState = localStorage.getItem("sidebar-sections-open");
-    if (!sectionState) return;
-
-    try {
-      const parsed = JSON.parse(sectionState) as Record<string, boolean>;
-      setSectionsOpen((prev) => ({
-        ...prev,
-        ...defaultSectionsOpen,
-        ...parsed,
-      }));
-    } catch {
-      setSectionsOpen(defaultSectionsOpen);
-    }
+    setSectionsOpen(parseSidebarSectionsState(sectionState, defaultSectionsOpen));
   }, [defaultSectionsOpen]);
 
   useEffect(() => {

@@ -162,7 +162,7 @@ GitHub Auth in Docker:
 - If this runs on a dedicated server in your home/lab network, use the server hostname or LAN IP in `NEXTAUTH_URL` instead of `localhost`.
 - In GitHub OAuth app settings, set the callback URL to:
   - `<NEXTAUTH_URL>/api/auth/callback/github`
-  - Example: `http://dispatch-server:3000/api/auth/callback/github`
+  - Example: `http://dispatch-server:8082/api/auth/callback/github`
 
 ## Local Development - Prerequisites
 
@@ -192,7 +192,7 @@ Create `.env.local` (local Node.js/dev runtime only):
 ```bash
 # Required for NextAuth
 AUTH_SECRET=your_random_secret
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:8082
 
 # GitHub OAuth (optional)
 AUTH_GITHUB_ID=your_github_oauth_client_id
@@ -214,11 +214,16 @@ npm run db:migrate
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:8082`.
 
 `npm run dev` starts both services:
-- Next.js app on `http://localhost:3000`
+- Next.js app on `http://localhost:8082`
 - Dispatch MCP server on `http://localhost:3001` (used by Personal Assistant tool calling)
+
+## Dependency Stability Policy
+
+- Core framework/auth runtime dependencies are pinned to exact versions (`next`, `react`, `react-dom`, `next-auth`, `eslint-config-next`) to avoid silent minor/patch drift.
+- Upgrade cadence: batch these dependencies intentionally (for example, monthly), then run the full test suite before merging.
 
 ### Dev Login (Optional)
 

@@ -299,7 +299,7 @@ Browser (useChat)  ──>  POST /api/ai/chat  ──>  MCP Client (@ai-sdk/mcp)
 ```
 
 - [x] **14.26** Install MCP dependencies: `@ai-sdk/mcp`, `@modelcontextprotocol/server`, `@modelcontextprotocol/node`. Add `concurrently` and `tsx` as dev dependencies for running the MCP server alongside Next.js.
-- [x] **14.27** Scaffold the MCP server entry point (`src/mcp-server/index.ts`): create a `McpServer` instance, start a `NodeStreamableHTTPServerTransport` on `process.env.MCP_PORT || 3001`, and add CORS headers for `localhost:3000`. Add `npm run mcp:dev` (tsx watch) and update `npm run dev` to run both Next.js and the MCP server via `concurrently`.
+- [x] **14.27** Scaffold the MCP server entry point (`src/mcp-server/index.ts`): create a `McpServer` instance, start a `NodeStreamableHTTPServerTransport` on `process.env.MCP_PORT || 3001`, and add CORS headers for `localhost:8082`. Add `npm run mcp:dev` (tsx watch) and update `npm run dev` to run both Next.js and the MCP server via `concurrently`.
 - [x] **14.28** Register **task tools** (`src/mcp-server/tools/tasks.ts`): `list-tasks` (with status/priority/project filters), `create-task`, `update-task` (title, description, status, priority, dueDate, projectId), `complete-task` (shorthand to set status=done), `delete-task` (soft-delete). All tools scope queries to the authenticated user's ID.
 - [x] **14.29** Register **note tools** (`src/mcp-server/tools/notes.ts`): `list-notes` (with title search), `create-note`, `update-note` (title, content), `delete-note` (soft-delete).
 - [x] **14.30** Register **project tools** (`src/mcp-server/tools/projects.ts`): `list-projects` (with status filter), `create-project`, `update-project` (name, description, status, color), `get-project-tasks` (list tasks within a project).

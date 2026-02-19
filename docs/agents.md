@@ -18,7 +18,7 @@ Dispatch is a locally-hosted personal task/note/project management app. Next.js 
 ## Key Commands
 
 ```
-npm run dev          # Dev server at localhost:3000
+npm run dev          # Dev server at localhost:8082
 npm run build        # Production build (use to verify changes compile)
 npm test             # Run Vitest tests
 npm run db:generate  # Generate Drizzle migrations after schema changes

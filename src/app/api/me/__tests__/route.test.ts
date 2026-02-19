@@ -133,6 +133,26 @@ describe("Me API", () => {
     expect(res.status).toBe(400);
   });
 
+  it("PUT rejects invalid JSON body", async () => {
+    const res = await PUT(
+      new Request("http://localhost/api/me", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: "not-json",
+      }),
+      {},
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("PUT rejects payloads without preference fields", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { ignored: true }),
+      {},
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("PUT updates defaultStartNode to projects", async () => {
     const res = await PUT(
       jsonReq("http://localhost/api/me", { defaultStartNode: "projects" }),
@@ -193,6 +213,51 @@ describe("Me API", () => {
       showDispatchHelp: true,
       notesMetadataCollapsedDefault: true,
       defaultStartNode: "dashboard",
+    });
+  });
+
+  it("PUT updates multiple preference fields in one request", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", {
+        showAdminQuickAccess: false,
+        assistantEnabled: false,
+        tasksTodayFocusDefault: true,
+        showDispatchHelp: false,
+        notesMetadataCollapsedDefault: true,
+        defaultStartNode: "tasks",
+      }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: false,
+      assistantEnabled: false,
+      tasksTodayFocusDefault: true,
+      showDispatchHelp: false,
+      notesMetadataCollapsedDefault: true,
+      defaultStartNode: "tasks",
+    });
+
+    const [updated] = testDb.db
+      .select({
+        showAdminQuickAccess: users.showAdminQuickAccess,
+        assistantEnabled: users.assistantEnabled,
+        tasksTodayFocusDefault: users.tasksTodayFocusDefault,
+        showDispatchHelp: users.showDispatchHelp,
+        notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
+        defaultStartNode: users.defaultStartNode,
+      })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id))
+      .all();
+
+    expect(updated).toEqual({
+      showAdminQuickAccess: false,
+      assistantEnabled: false,
+      tasksTodayFocusDefault: true,
+      showDispatchHelp: false,
+      notesMetadataCollapsedDefault: true,
+      defaultStartNode: "tasks",
     });
   });
 

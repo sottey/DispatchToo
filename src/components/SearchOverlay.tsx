@@ -17,6 +17,63 @@ type ResultItem =
   | { type: "project"; id: string; title: string; subtitle: string | null };
 type ActionItem = Extract<ResultItem, { type: "action" }>;
 
+export const SEARCH_ACTION_ITEMS: ActionItem[] = [
+  {
+    type: "action",
+    id: "create-task",
+    title: "Create Task",
+    subtitle: "Open new task flow",
+    keywords: ["new", "task", "create", "add"],
+  },
+  {
+    type: "action",
+    id: "create-note",
+    title: "Create New Note",
+    subtitle: "Open new note flow",
+    keywords: ["new", "note", "create", "add"],
+  },
+  {
+    type: "action",
+    id: "create-project",
+    title: "Create Project",
+    subtitle: "Open new project flow",
+    keywords: ["new", "project", "create", "add"],
+  },
+  {
+    type: "action",
+    id: "open-dashboard",
+    title: "Open Dashboard",
+    subtitle: "Open overview dashboard",
+    keywords: ["dashboard", "home", "overview"],
+  },
+  {
+    type: "action",
+    id: "open-dispatch",
+    title: "Open Dispatch",
+    subtitle: "Jump to daily dispatch",
+    keywords: ["dispatch", "day", "daily"],
+  },
+  {
+    type: "action",
+    id: "open-inbox",
+    title: "Open Priority Inbox",
+    subtitle: "Review priority items",
+    keywords: ["inbox", "priority"],
+  },
+];
+
+export function filterSearchActionItems(query: string): ActionItem[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  return SEARCH_ACTION_ITEMS.filter((item) => {
+    if (!normalizedQuery) return true;
+    return (
+      item.title.toLowerCase().includes(normalizedQuery) ||
+      (item.subtitle ?? "").toLowerCase().includes(normalizedQuery) ||
+      item.keywords.some((keyword) => keyword.includes(normalizedQuery))
+    );
+  });
+}
+
 export function SearchOverlay({ onClose }: SearchOverlayProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,60 +136,7 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
     };
   }, []);
 
-  const actionItems: ActionItem[] = [
-    {
-      type: "action",
-      id: "create-task",
-      title: "Create Task",
-      subtitle: "Open new task flow",
-      keywords: ["new", "task", "create", "add"],
-    },
-    {
-      type: "action",
-      id: "create-note",
-      title: "Create New Note",
-      subtitle: "Open new note flow",
-      keywords: ["new", "note", "create", "add"],
-    },
-    {
-      type: "action",
-      id: "create-project",
-      title: "Create Project",
-      subtitle: "Open new project flow",
-      keywords: ["new", "project", "create", "add"],
-    },
-    {
-      type: "action",
-      id: "open-dashboard",
-      title: "Open Dashboard",
-      subtitle: "Open overview dashboard",
-      keywords: ["dashboard", "home", "overview"],
-    },
-    {
-      type: "action",
-      id: "open-dispatch",
-      title: "Open Dispatch",
-      subtitle: "Jump to daily dispatch",
-      keywords: ["dispatch", "day", "daily"],
-    },
-    {
-      type: "action",
-      id: "open-inbox",
-      title: "Open Priority Inbox",
-      subtitle: "Review priority items",
-      keywords: ["inbox", "priority"],
-    },
-  ];
-
-  const normalizedQuery = query.trim().toLowerCase();
-  const filteredActionItems = actionItems.filter((item) => {
-    if (!normalizedQuery) return true;
-    return (
-      item.title.toLowerCase().includes(normalizedQuery) ||
-      (item.subtitle ?? "").toLowerCase().includes(normalizedQuery) ||
-      item.keywords.some((keyword) => keyword.includes(normalizedQuery))
-    );
-  });
+  const filteredActionItems = filterSearchActionItems(query);
 
   // Flatten results for keyboard navigation
   const flatItems: ResultItem[] = [...filteredActionItems];

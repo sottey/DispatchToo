@@ -109,7 +109,7 @@ export function IntegrationsPage() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(ENDPOINTS[0].id);
   const [snippetMode, setSnippetMode] = useState<SnippetMode>("curl");
-  const [baseUrl, setBaseUrl] = useState("http://localhost:3000");
+  const [baseUrl, setBaseUrl] = useState("http://localhost:8082");
   const [copied, setCopied] = useState<string | null>(null);
   const [activeApiKeyId, setActiveApiKeyId] = useState<string | null>(null);
   const [tryLoading, setTryLoading] = useState(false);
