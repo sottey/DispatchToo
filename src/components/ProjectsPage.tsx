@@ -323,7 +323,7 @@ export function ProjectsPage() {
     setTimeout(() => setDeletingTaskId(null), 2500);
   }
 
-  async function handleTaskSaved() {
+  async function handleTaskSaved(_task: Task) {
     setTaskModalOpen(false);
     setEditingTask(null);
     toast.success("Task saved");

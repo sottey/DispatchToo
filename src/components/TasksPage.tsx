@@ -309,7 +309,7 @@ export function TasksPage() {
     setDeletingId(null);
   }
 
-  function handleSaved() {
+  function handleSaved(_task: Task) {
     setModalOpen(false);
     setEditingTask(null);
     fetchTasks();

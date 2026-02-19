@@ -10,6 +10,7 @@ import {
 import { addDaysToDateKey, formatDateKeyForDisplay, todayDateKey } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import { DispatchHistoryOverlay } from "@/components/DispatchHistoryOverlay";
+import { TaskModal } from "@/components/TaskModal";
 import {
   IconBolt,
   IconCalendar,
@@ -43,6 +44,7 @@ export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchH
   const [showAddTasks, setShowAddTasks] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [unfinalizing, setUnfinalizing] = useState(false);
   const [unfinalizeWarning, setUnfinalizeWarning] = useState<{ nextDate: string } | null>(null);
   const [completingIds, setCompletingIds] = useState<string[]>([]);
@@ -146,6 +148,24 @@ export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchH
       fetchDispatch();
     } catch {
       toast.error("Failed to link task");
+    }
+  }
+
+  async function handleTaskSaved(task: Task) {
+    if (!dispatch) {
+      setTaskModalOpen(false);
+      return;
+    }
+
+    try {
+      await api.dispatches.linkTask(dispatch.id, task.id);
+      setTaskModalOpen(false);
+      await fetchDispatch();
+      toast.success("Task created and linked");
+    } catch {
+      setTaskModalOpen(false);
+      await fetchDispatch();
+      toast.error("Task created, but failed to link to dispatch");
     }
   }
 
@@ -492,9 +512,20 @@ export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchH
         <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/50 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Tasks</h2>
-            <span className="text-xs text-neutral-400 dark:text-neutral-500">
-              {doneCount}/{linkedTasks.length} done
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                {doneCount}/{linkedTasks.length} done
+              </span>
+              {!dispatch?.finalized && (
+                <button
+                  onClick={() => setTaskModalOpen(true)}
+                  className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-3 py-1 text-xs font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 active:scale-95 transition-all inline-flex items-center gap-1.5"
+                >
+                  <IconPlus className="w-3.5 h-3.5" />
+                  New Task
+                </button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -740,6 +771,15 @@ export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchH
             setDate(newDate);
             setShowHistory(false);
           }}
+        />
+      )}
+
+      {taskModalOpen && (
+        <TaskModal
+          task={null}
+          defaultDueDate={date}
+          onClose={() => setTaskModalOpen(false)}
+          onSaved={handleTaskSaved}
         />
       )}
     </div>

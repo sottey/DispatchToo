@@ -15,13 +15,15 @@ import { CustomSelect } from "@/components/CustomSelect";
 export function TaskModal({
   task,
   defaultProjectId,
+  defaultDueDate,
   onClose,
   onSaved,
 }: {
   task: Task | null;
   defaultProjectId?: string;
+  defaultDueDate?: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (task: Task) => void;
 }) {
   const isEditing = task !== null;
 
@@ -31,7 +33,7 @@ export function TaskModal({
   const [priority, setPriority] = useState<TaskPriority>(
     task?.priority ?? "medium",
   );
-  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? defaultDueDate ?? "");
   const [projectId, setProjectId] = useState(
     task?.projectId ?? defaultProjectId ?? "",
   );
@@ -67,8 +69,9 @@ export function TaskModal({
     setError("");
 
     try {
+      let savedTask: Task;
       if (isEditing) {
-        await api.tasks.update(task.id, {
+        savedTask = await api.tasks.update(task.id, {
           title: title.trim(),
           description: description || undefined,
           status,
@@ -77,7 +80,7 @@ export function TaskModal({
           projectId: projectId || null,
         });
       } else {
-        await api.tasks.create({
+        savedTask = await api.tasks.create({
           title: title.trim(),
           description: description || undefined,
           status,
@@ -86,7 +89,7 @@ export function TaskModal({
           projectId: projectId || null,
         });
       }
-      onSaved();
+      onSaved(savedTask);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     } finally {
