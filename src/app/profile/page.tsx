@@ -41,6 +41,7 @@ export default async function Profile() {
         assistantEnabled: users.assistantEnabled,
         tasksTodayFocusDefault: users.tasksTodayFocusDefault,
         showDispatchHelp: users.showDispatchHelp,
+        displayDispatchNotes: users.displayDispatchNotes,
         notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
         defaultStartNode: users.defaultStartNode,
       })
@@ -56,6 +57,7 @@ export default async function Profile() {
   const assistantEnabled = currentUserRecord?.assistantEnabled ?? true;
   const tasksTodayFocusDefault = currentUserRecord?.tasksTodayFocusDefault ?? false;
   const showDispatchHelp = currentUserRecord?.showDispatchHelp ?? true;
+  const displayDispatchNotes = currentUserRecord?.displayDispatchNotes ?? true;
   const notesMetadataCollapsedDefault = currentUserRecord?.notesMetadataCollapsedDefault ?? false;
   const defaultStartNode = currentUserRecord?.defaultStartNode ?? "dashboard";
 
@@ -125,6 +127,7 @@ export default async function Profile() {
         assistantEnabled={assistantEnabled}
         tasksTodayFocusDefault={tasksTodayFocusDefault}
         showDispatchHelpDefault={showDispatchHelp}
+        displayDispatchNotesDefault={displayDispatchNotes}
         notesMetadataCollapsedDefault={notesMetadataCollapsedDefault}
         defaultStartNode={defaultStartNode}
       />

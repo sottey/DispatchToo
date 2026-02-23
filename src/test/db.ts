@@ -26,6 +26,7 @@ export function createTestDb() {
       "assistantEnabled" integer NOT NULL DEFAULT 1,
       "tasksTodayFocusDefault" integer NOT NULL DEFAULT 0,
       "showDispatchHelp" integer NOT NULL DEFAULT 1,
+      "displayDispatchNotes" integer NOT NULL DEFAULT 1,
       "notesMetadataCollapsedDefault" integer NOT NULL DEFAULT 0,
       "defaultStartNode" text NOT NULL DEFAULT 'dashboard'
     );

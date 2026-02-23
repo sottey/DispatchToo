@@ -30,6 +30,7 @@ export const PUT = withAuth(async (req, session) => {
     assistantEnabled,
     tasksTodayFocusDefault,
     showDispatchHelp,
+    displayDispatchNotes,
     notesMetadataCollapsedDefault,
     defaultStartNode,
   } = body as Record<string, unknown>;
@@ -48,6 +49,10 @@ export const PUT = withAuth(async (req, session) => {
 
   if (showDispatchHelp !== undefined && typeof showDispatchHelp !== "boolean") {
     return errorResponse("showDispatchHelp must be a boolean", 400);
+  }
+
+  if (displayDispatchNotes !== undefined && typeof displayDispatchNotes !== "boolean") {
+    return errorResponse("displayDispatchNotes must be a boolean", 400);
   }
 
   if (
@@ -72,6 +77,7 @@ export const PUT = withAuth(async (req, session) => {
     assistantEnabled === undefined &&
     tasksTodayFocusDefault === undefined &&
     showDispatchHelp === undefined &&
+    displayDispatchNotes === undefined &&
     notesMetadataCollapsedDefault === undefined &&
     defaultStartNode === undefined
   ) {
@@ -83,6 +89,7 @@ export const PUT = withAuth(async (req, session) => {
   if (assistantEnabled !== undefined) updates.assistantEnabled = assistantEnabled;
   if (tasksTodayFocusDefault !== undefined) updates.tasksTodayFocusDefault = tasksTodayFocusDefault;
   if (showDispatchHelp !== undefined) updates.showDispatchHelp = showDispatchHelp;
+  if (displayDispatchNotes !== undefined) updates.displayDispatchNotes = displayDispatchNotes;
   if (notesMetadataCollapsedDefault !== undefined) {
     updates.notesMetadataCollapsedDefault = notesMetadataCollapsedDefault;
   }
@@ -97,6 +104,7 @@ export const PUT = withAuth(async (req, session) => {
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
       showDispatchHelp: users.showDispatchHelp,
+      displayDispatchNotes: users.displayDispatchNotes,
       notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     });
@@ -110,6 +118,8 @@ export const PUT = withAuth(async (req, session) => {
       updated?.tasksTodayFocusDefault ?? (tasksTodayFocusDefault as boolean | undefined) ?? false,
     showDispatchHelp:
       updated?.showDispatchHelp ?? (showDispatchHelp as boolean | undefined) ?? true,
+    displayDispatchNotes:
+      updated?.displayDispatchNotes ?? (displayDispatchNotes as boolean | undefined) ?? true,
     notesMetadataCollapsedDefault:
       updated?.notesMetadataCollapsedDefault ??
       (notesMetadataCollapsedDefault as boolean | undefined) ??

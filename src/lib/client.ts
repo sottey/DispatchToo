@@ -140,6 +140,7 @@ export interface MePreferences {
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
   showDispatchHelp?: boolean;
+  displayDispatchNotes?: boolean;
   notesMetadataCollapsedDefault?: boolean;
   defaultStartNode?: DefaultStartNode;
 }
@@ -420,6 +421,7 @@ export const api = {
       folderId?: string;
       projectId?: string;
       dispatchDate?: string;
+      includeDispatchNotes?: boolean;
       tag?: string;
       page?: number;
       limit?: number;
@@ -430,6 +432,8 @@ export const api = {
         folderId: params?.folderId,
         projectId: params?.projectId,
         dispatchDate: params?.dispatchDate,
+        includeDispatchNotes:
+          params?.includeDispatchNotes === undefined ? undefined : String(params.includeDispatchNotes),
         tag: params?.tag,
         page: params?.page?.toString(),
         limit: params?.limit?.toString(),

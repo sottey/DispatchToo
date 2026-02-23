@@ -23,6 +23,7 @@ const TEST_USER = {
   assistantEnabled: true,
   tasksTodayFocusDefault: false,
   showDispatchHelp: true,
+  displayDispatchNotes: true,
   notesMetadataCollapsedDefault: false,
   defaultStartNode: "dashboard" as const,
 };
@@ -67,6 +68,7 @@ describe("Me API", () => {
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
       showDispatchHelp: true,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
@@ -90,6 +92,7 @@ describe("Me API", () => {
       assistantEnabled: false,
       tasksTodayFocusDefault: false,
       showDispatchHelp: true,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
@@ -113,6 +116,7 @@ describe("Me API", () => {
       assistantEnabled: true,
       tasksTodayFocusDefault: true,
       showDispatchHelp: true,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
@@ -164,6 +168,7 @@ describe("Me API", () => {
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
       showDispatchHelp: true,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: false,
       defaultStartNode: "projects",
     });
@@ -195,6 +200,7 @@ describe("Me API", () => {
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
       showDispatchHelp: false,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
@@ -211,7 +217,25 @@ describe("Me API", () => {
       assistantEnabled: true,
       tasksTodayFocusDefault: false,
       showDispatchHelp: true,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: true,
+      defaultStartNode: "dashboard",
+    });
+  });
+
+  it("PUT updates displayDispatchNotes to false", async () => {
+    const res = await PUT(
+      jsonReq("http://localhost/api/me", { displayDispatchNotes: false }),
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      showAdminQuickAccess: true,
+      assistantEnabled: true,
+      tasksTodayFocusDefault: false,
+      showDispatchHelp: true,
+      displayDispatchNotes: false,
+      notesMetadataCollapsedDefault: false,
       defaultStartNode: "dashboard",
     });
   });
@@ -223,6 +247,7 @@ describe("Me API", () => {
         assistantEnabled: false,
         tasksTodayFocusDefault: true,
         showDispatchHelp: false,
+        displayDispatchNotes: true,
         notesMetadataCollapsedDefault: true,
         defaultStartNode: "tasks",
       }),
@@ -234,6 +259,7 @@ describe("Me API", () => {
       assistantEnabled: false,
       tasksTodayFocusDefault: true,
       showDispatchHelp: false,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: true,
       defaultStartNode: "tasks",
     });
@@ -244,6 +270,7 @@ describe("Me API", () => {
         assistantEnabled: users.assistantEnabled,
         tasksTodayFocusDefault: users.tasksTodayFocusDefault,
         showDispatchHelp: users.showDispatchHelp,
+        displayDispatchNotes: users.displayDispatchNotes,
         notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
         defaultStartNode: users.defaultStartNode,
       })
@@ -256,6 +283,7 @@ describe("Me API", () => {
       assistantEnabled: false,
       tasksTodayFocusDefault: true,
       showDispatchHelp: false,
+      displayDispatchNotes: true,
       notesMetadataCollapsedDefault: true,
       defaultStartNode: "tasks",
     });

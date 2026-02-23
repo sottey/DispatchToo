@@ -44,6 +44,7 @@ async function getUserAccess(
   assistantEnabled: boolean;
   tasksTodayFocusDefault: boolean;
   showDispatchHelp: boolean;
+  displayDispatchNotes: boolean;
   notesMetadataCollapsedDefault: boolean;
   defaultStartNode: DefaultStartNode;
 } | null> {
@@ -56,6 +57,7 @@ async function getUserAccess(
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
       showDispatchHelp: users.showDispatchHelp,
+      displayDispatchNotes: users.displayDispatchNotes,
       notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     })
@@ -74,6 +76,7 @@ async function getUserAccess(
     assistantEnabled: dbUser.assistantEnabled ?? true,
     tasksTodayFocusDefault: dbUser.tasksTodayFocusDefault ?? false,
     showDispatchHelp: dbUser.showDispatchHelp ?? true,
+    displayDispatchNotes: dbUser.displayDispatchNotes ?? true,
     notesMetadataCollapsedDefault: dbUser.notesMetadataCollapsedDefault ?? false,
     defaultStartNode: (dbUser.defaultStartNode as DefaultStartNode | null) ?? "dashboard",
   };
@@ -121,6 +124,7 @@ providers.push(
         assistantEnabled: user.assistantEnabled ?? true,
         tasksTodayFocusDefault: user.tasksTodayFocusDefault ?? false,
         showDispatchHelp: user.showDispatchHelp ?? true,
+        displayDispatchNotes: user.displayDispatchNotes ?? true,
         notesMetadataCollapsedDefault: user.notesMetadataCollapsedDefault ?? false,
         defaultStartNode: (user.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard",
       };
@@ -217,6 +221,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             delete token.assistantEnabled;
             delete token.tasksTodayFocusDefault;
             delete token.showDispatchHelp;
+            delete token.displayDispatchNotes;
             delete token.notesMetadataCollapsedDefault;
             delete token.defaultStartNode;
             return token;
@@ -227,6 +232,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.assistantEnabled = access.assistantEnabled;
           token.tasksTodayFocusDefault = access.tasksTodayFocusDefault;
           token.showDispatchHelp = access.showDispatchHelp;
+          token.displayDispatchNotes = access.displayDispatchNotes;
           token.notesMetadataCollapsedDefault = access.notesMetadataCollapsedDefault;
           token.defaultStartNode = access.defaultStartNode;
         } catch (error) {
@@ -238,6 +244,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
           token.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
           token.showDispatchHelp = (token.showDispatchHelp as boolean | undefined) ?? true;
+          token.displayDispatchNotes = (token.displayDispatchNotes as boolean | undefined) ?? true;
           token.notesMetadataCollapsedDefault =
             (token.notesMetadataCollapsedDefault as boolean | undefined) ?? false;
           token.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";
@@ -255,6 +262,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
         session.user.tasksTodayFocusDefault = (token.tasksTodayFocusDefault as boolean | undefined) ?? false;
         session.user.showDispatchHelp = (token.showDispatchHelp as boolean | undefined) ?? true;
+        session.user.displayDispatchNotes = (token.displayDispatchNotes as boolean | undefined) ?? true;
         session.user.notesMetadataCollapsedDefault =
           (token.notesMetadataCollapsedDefault as boolean | undefined) ?? false;
         session.user.defaultStartNode = (token.defaultStartNode as DefaultStartNode | undefined) ?? "dashboard";

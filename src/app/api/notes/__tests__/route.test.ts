@@ -322,6 +322,43 @@ Body`,
       expect(tagData).toHaveLength(1);
       expect(tagData[0].title).toBe("Typed note");
     });
+
+    it("excludes dispatch notes when includeDispatchNotes=false", async () => {
+      await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Dispatch journal",
+          content: `---
+dispatchDate: 2025-06-15
+---
+Body`,
+        }),
+        {}
+      );
+
+      const res = await GET(
+        new Request("http://localhost/api/notes?includeDispatchNotes=false"),
+        {}
+      );
+      const data = await res.json();
+      expect(data.every((note: { dispatchDate: string | null }) => note.dispatchDate === null)).toBe(true);
+    });
+
+    it("excludes title-based daily dispatch notes when includeDispatchNotes=false", async () => {
+      await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Daily Dispatch - 2026-02-15",
+          content: "Dispatch summary",
+        }),
+        {}
+      );
+
+      const res = await GET(
+        new Request("http://localhost/api/notes?includeDispatchNotes=false"),
+        {}
+      );
+      const data = await res.json();
+      expect(data.some((note: { title: string }) => note.title.startsWith("Daily Dispatch - "))).toBe(false);
+    });
   });
 
   // --- GET /api/notes/[id] ---

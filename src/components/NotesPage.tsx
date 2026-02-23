@@ -12,7 +12,11 @@ function formatShortDate(value: string) {
   return formatTimestamp(value, { year: "numeric", month: "numeric", day: "numeric" });
 }
 
-export function NotesPage() {
+export function NotesPage({
+  displayDispatchNotesDefault = true,
+}: {
+  displayDispatchNotesDefault?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -24,6 +28,7 @@ export function NotesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [includeDispatchNotes, setIncludeDispatchNotes] = useState(displayDispatchNotesDefault);
   const activeTag = searchParams.get("tag")?.trim().toLowerCase() || "";
 
   const fetchNotes = useCallback(async () => {
@@ -31,6 +36,7 @@ export function NotesPage() {
     try {
       const data = await api.notes.list({
         search: search || undefined,
+        includeDispatchNotes,
         tag: activeTag || undefined,
         page,
         limit: 20,
@@ -45,7 +51,7 @@ export function NotesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, activeTag, page]);
+  }, [search, includeDispatchNotes, activeTag, page]);
 
   useEffect(() => {
     const timeout = setTimeout(fetchNotes, search ? 300 : 0);
@@ -55,7 +61,7 @@ export function NotesPage() {
   // Reset page on search change
   useEffect(() => {
     setPage(1);
-  }, [search, activeTag]);
+  }, [search, includeDispatchNotes, activeTag]);
 
   // Listen for keyboard shortcut to create new note
   useEffect(() => {
@@ -153,6 +159,15 @@ export function NotesPage() {
           className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
         />
         <div className="flex items-center gap-2">
+          <label className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-xs text-neutral-600 dark:text-neutral-300 whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={includeDispatchNotes}
+              onChange={(e) => setIncludeDispatchNotes(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800"
+            />
+            <span>Dispatch Notes</span>
+          </label>
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
             View
           </span>

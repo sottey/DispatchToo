@@ -29,6 +29,9 @@ export const users = sqliteTable("user", {
   showDispatchHelp: integer("showDispatchHelp", { mode: "boolean" })
     .notNull()
     .default(true),
+  displayDispatchNotes: integer("displayDispatchNotes", { mode: "boolean" })
+    .notNull()
+    .default(true),
   notesMetadataCollapsedDefault: integer("notesMetadataCollapsedDefault", { mode: "boolean" })
     .notNull()
     .default(false),

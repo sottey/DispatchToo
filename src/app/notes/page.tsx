@@ -8,5 +8,5 @@ export default async function Notes() {
     redirect("/login");
   }
 
-  return <NotesPage />;
+  return <NotesPage displayDispatchNotesDefault={session.user.displayDispatchNotes ?? true} />;
 }

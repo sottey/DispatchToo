@@ -262,6 +262,15 @@ describe("api.notes", () => {
       expect(url).toContain("page=2");
       expect(url).toContain("limit=10");
     });
+
+    it("appends includeDispatchNotes query param", async () => {
+      mockFetch.mockResolvedValueOnce(jsonOk([]));
+
+      await api.notes.list({ includeDispatchNotes: false });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain("includeDispatchNotes=false");
+    });
   });
 
   describe("get", () => {

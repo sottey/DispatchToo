@@ -318,7 +318,10 @@ export function DispatchPage({ showDispatchHelpDefault = true }: { showDispatchH
 
   const linkedIds = new Set(linkedTasks.map((t) => t.id));
   const availableTasks = allTasks.filter(
-    (t) => !linkedIds.has(t.id) && t.status !== "done",
+    (t) =>
+      !linkedIds.has(t.id) &&
+      t.status !== "done" &&
+      (!t.dueDate || t.dueDate.slice(0, 10) <= date),
   );
   const normalizedSearch = taskSearch.trim().toLowerCase();
   const filteredAvailableTasks = availableTasks.filter((task) => {

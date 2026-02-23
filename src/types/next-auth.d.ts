@@ -11,6 +11,7 @@ declare module "next-auth" {
       assistantEnabled: boolean;
       tasksTodayFocusDefault: boolean;
       showDispatchHelp: boolean;
+      displayDispatchNotes: boolean;
       notesMetadataCollapsedDefault: boolean;
       defaultStartNode: "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
       name?: string | null;
@@ -26,6 +27,7 @@ declare module "next-auth" {
     assistantEnabled?: boolean;
     tasksTodayFocusDefault?: boolean;
     showDispatchHelp?: boolean;
+    displayDispatchNotes?: boolean;
     notesMetadataCollapsedDefault?: boolean;
     defaultStartNode?: "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
   }
@@ -39,6 +41,7 @@ declare module "next-auth/jwt" {
     assistantEnabled?: boolean;
     tasksTodayFocusDefault?: boolean;
     showDispatchHelp?: boolean;
+    displayDispatchNotes?: boolean;
     notesMetadataCollapsedDefault?: boolean;
     defaultStartNode?: "dashboard" | "dispatch" | "inbox" | "tasks" | "notes" | "insights" | "projects";
     provider?: string;

@@ -51,6 +51,7 @@ export function ProfilePreferences({
   assistantEnabled = true,
   tasksTodayFocusDefault = false,
   showDispatchHelpDefault = true,
+  displayDispatchNotesDefault = true,
   notesMetadataCollapsedDefault = false,
   defaultStartNode = "dashboard",
 }: {
@@ -59,6 +60,7 @@ export function ProfilePreferences({
   assistantEnabled?: boolean;
   tasksTodayFocusDefault?: boolean;
   showDispatchHelpDefault?: boolean;
+  displayDispatchNotesDefault?: boolean;
   notesMetadataCollapsedDefault?: boolean;
   defaultStartNode?: DefaultStartNode;
 }) {
@@ -71,11 +73,13 @@ export function ProfilePreferences({
   const [tasksTodayFocusByDefault, setTasksTodayFocusByDefault] = useState(tasksTodayFocusDefault);
   const [selectedStartNode, setSelectedStartNode] = useState<DefaultStartNode>(defaultStartNode);
   const [showDispatchHelpPanel, setShowDispatchHelpPanel] = useState(showDispatchHelpDefault);
+  const [displayDispatchNotesByDefault, setDisplayDispatchNotesByDefault] = useState(displayDispatchNotesDefault);
   const [notesMetadataCollapsedByDefault, setNotesMetadataCollapsedByDefault] = useState(notesMetadataCollapsedDefault);
   const [savingAdminButtonPref, setSavingAdminButtonPref] = useState(false);
   const [savingAssistantVisibility, setSavingAssistantVisibility] = useState(false);
   const [savingTasksTodayFocusDefault, setSavingTasksTodayFocusDefault] = useState(false);
   const [savingDispatchHelpPanel, setSavingDispatchHelpPanel] = useState(false);
+  const [savingDisplayDispatchNotesDefault, setSavingDisplayDispatchNotesDefault] = useState(false);
   const [savingNotesMetadataCollapsedDefault, setSavingNotesMetadataCollapsedDefault] = useState(false);
   const [savingDefaultStartNode, setSavingDefaultStartNode] = useState(false);
 
@@ -283,6 +287,21 @@ export function ProfilePreferences({
     }
   }
 
+  async function handleToggleDisplayDispatchNotesDefault() {
+    const next = !displayDispatchNotesByDefault;
+    setDisplayDispatchNotesByDefault(next);
+    setSavingDisplayDispatchNotesDefault(true);
+    try {
+      await api.me.updatePreferences({ displayDispatchNotes: next });
+      await update();
+    } catch (error) {
+      setDisplayDispatchNotesByDefault(!next);
+      toast.error(error instanceof Error ? error.message : "Failed to update dispatch notes preference");
+    } finally {
+      setSavingDisplayDispatchNotesDefault(false);
+    }
+  }
+
   async function handleSaveAiConfig() {
     if (aiReadOnly) {
       toast.info(aiReadOnlyReason ?? "AI settings are managed by an administrator.");
@@ -459,6 +478,26 @@ export function ProfilePreferences({
             />
             Collapsed
           </label>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Display Dispatch Notes</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              Default for including Daily Dispatch notes in the Notes page list.
+            </p>
+          </div>
+          <button
+            onClick={handleToggleDisplayDispatchNotesDefault}
+            disabled={savingDisplayDispatchNotesDefault}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 disabled:opacity-60 ${
+              displayDispatchNotesByDefault
+                ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-300"
+                : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            }`}
+          >
+            {displayDispatchNotesByDefault ? "Shown" : "Hidden"}
+          </button>
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">

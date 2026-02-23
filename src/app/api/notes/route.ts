@@ -74,6 +74,7 @@ export const GET = withAuth(async (req, session) => {
   const folderId = url.searchParams.get("folderId");
   const projectId = url.searchParams.get("projectId");
   const dispatchDate = url.searchParams.get("dispatchDate");
+  const includeDispatchNotes = url.searchParams.get("includeDispatchNotes");
   const tag = url.searchParams.get("tag")?.trim().toLowerCase();
 
   const conditions = [eq(notes.userId, session.user!.id!), isNull(notes.deletedAt)];
@@ -86,6 +87,11 @@ export const GET = withAuth(async (req, session) => {
   if (folderId) conditions.push(eq(notes.folderId, folderId));
   if (projectId) conditions.push(eq(notes.projectId, projectId));
   if (dispatchDate) conditions.push(eq(notes.dispatchDate, dispatchDate));
+  if (includeDispatchNotes === "false") {
+    conditions.push(
+      sql`NOT (${notes.dispatchDate} IS NOT NULL OR ${notes.title} LIKE 'Daily Dispatch - %')`,
+    );
+  }
 
   const where = and(...conditions);
   const allResults = await db
