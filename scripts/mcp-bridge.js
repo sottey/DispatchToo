@@ -62,6 +62,7 @@ async function makeRequest(jsonrpcRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Content-Length': Buffer.byteLength(postData),
         'Authorization': `Bearer ${MCP_AUTH_TOKEN}`,
         'x-dispatch-user-id': USER_ID,

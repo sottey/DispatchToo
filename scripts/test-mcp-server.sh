@@ -63,6 +63,7 @@ echo ""
 
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://$MCP_HOST:$MCP_PORT/mcp" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -H "x-dispatch-user-id: $DISPATCH_USER_ID" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}')
 
@@ -95,6 +96,7 @@ if [ -n "$MCP_AUTH_TOKEN" ]; then
 
     RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://$MCP_HOST:$MCP_PORT/mcp" \
       -H "Content-Type: application/json" \
+      -H "Accept: application/json, text/event-stream" \
       -H "Authorization: Bearer $MCP_AUTH_TOKEN" \
       -H "x-dispatch-user-id: $DISPATCH_USER_ID" \
       -d '{"jsonrpc":"2.0","method":"tools/list","id":1}')

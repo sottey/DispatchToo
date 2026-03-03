@@ -169,6 +169,7 @@ For custom applications, you can connect directly to the HTTP endpoint:
 
 **Headers:**
 - `Content-Type: application/json`
+- `Accept: application/json, text/event-stream` (required for MCP HTTP transport)
 - `Authorization: Bearer your-auth-token`
 - `x-dispatch-user-id: your-user-id` (required for authentication)
 
@@ -177,6 +178,7 @@ For custom applications, you can connect directly to the HTTP endpoint:
 ```bash
 curl -X POST http://your-server:3001/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -H "Authorization: Bearer your-auth-token" \
   -H "x-dispatch-user-id: user123" \
   -d '{
