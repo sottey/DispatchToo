@@ -4,6 +4,7 @@ services:
     restart: unless-stopped
     ports:
       - "${DISPATCH_PORT:-3000}:3000"
+      - "${MCP_PORT:-3001}:3001"
     environment:
       AUTH_SECRET: ${AUTH_SECRET:-dispatch-local-prod-secret-change-me}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
@@ -11,6 +12,9 @@ services:
       DATABASE_URL: /app/data/dispatch.db
       AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
       AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
+      MCP_PORT: ${MCP_PORT:-3001}
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-*}
     volumes:
       - dispatch-data:/app/data
 

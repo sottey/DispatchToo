@@ -220,6 +220,8 @@ Open `http://localhost:8082`.
 - Next.js app on `http://localhost:8082`
 - Dispatch MCP server on `http://localhost:3001` (used by Personal Assistant tool calling)
 
+For network access and Claude Desktop integration, see [MCP-SERVER-SETUP.md](./MCP-SERVER-SETUP.md)
+
 ## Dependency Stability Policy
 
 - Core framework/auth runtime dependencies are pinned to exact versions (`next`, `react`, `react-dom`, `next-auth`, `eslint-config-next`) to avoid silent minor/patch drift.

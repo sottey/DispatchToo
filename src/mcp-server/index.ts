@@ -8,7 +8,10 @@ import { registerSearchTool } from "@/mcp-server/tools/search";
 import { registerTaskTools } from "@/mcp-server/tools/tasks";
 
 const MCP_PORT = Number(process.env.MCP_PORT || 3001);
-const ALLOWED_ORIGINS = new Set(["http://localhost:8082", "http://127.0.0.1:8082"]);
+const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
+const ALLOWED_ORIGINS = process.env.MCP_ALLOWED_ORIGINS
+  ? new Set(process.env.MCP_ALLOWED_ORIGINS.split(",").map((o) => o.trim()))
+  : new Set(["http://localhost:8082", "http://127.0.0.1:8082"]);
 
 function createDispatchMcpServer() {
   const server = new McpServer(
@@ -27,7 +30,12 @@ function createDispatchMcpServer() {
 
 function setCorsHeaders(req: IncomingMessage, res: ServerResponse) {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+
+  // Support wildcard CORS for development/network access
+  if (ALLOWED_ORIGINS.has("*")) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    if (origin) res.setHeader("Vary", "Origin");
+  } else if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
@@ -68,6 +76,23 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
       }),
     );
     return;
+  }
+
+  // Check authentication token if configured
+  if (MCP_AUTH_TOKEN) {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace(/^Bearer\s+/i, "");
+    if (token !== MCP_AUTH_TOKEN) {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Unauthorized." },
+          id: null,
+        }),
+      );
+      return;
+    }
   }
 
   const mcpServer = createDispatchMcpServer();
