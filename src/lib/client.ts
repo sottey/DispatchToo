@@ -38,6 +38,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string | null;
+  position: number;
   createdAt: string;
   updatedAt: string;
 }

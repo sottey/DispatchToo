@@ -504,7 +504,7 @@ export function ProfilePreferences({
           <div>
             <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tasks: Today Focus Default</p>
             <p className="text-xs text-neutral-400 dark:text-neutral-500">
-              When enabled, Tasks page opens with "Show only due today" turned on (due today + overdue).
+              When enabled, Tasks page opens with &quot;Show only due today&quot; turned on (due today + overdue).
             </p>
           </div>
           <button

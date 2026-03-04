@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, session) => {
       .select()
       .from(tasks)
       .where(where)
-      .orderBy(tasks.createdAt)
+      .orderBy(tasks.position, tasks.createdAt)
       .limit(pagination.limit)
       .offset((pagination.page - 1) * pagination.limit);
 
@@ -62,7 +62,7 @@ export const GET = withAuth(async (req, session) => {
     .select()
     .from(tasks)
     .where(where)
-    .orderBy(tasks.createdAt);
+    .orderBy(tasks.position, tasks.createdAt);
 
   return jsonResponse(results);
 });
@@ -76,7 +76,7 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { title, description, status, priority, dueDate, projectId } = body as Record<string, unknown>;
+  const { title, description, status, priority, dueDate, projectId, position } = body as Record<string, unknown>;
 
   if (!title || typeof title !== "string" || title.trim().length === 0) {
     return errorResponse("title is required and must be a non-empty string", 400);
@@ -114,6 +114,10 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("projectId must be a string or null", 400);
   }
 
+  if (position !== undefined && typeof position !== "number") {
+    return errorResponse("position must be a number", 400);
+  }
+
   let resolvedProjectId: string | null | undefined = undefined;
   if (projectId === null) {
     resolvedProjectId = null;
@@ -130,6 +134,15 @@ export const POST = withAuth(async (req, session) => {
 
   const now = new Date().toISOString();
 
+  let resolvedPosition = position as number | undefined;
+  if (resolvedPosition === undefined) {
+    const [{ maxPos }] = await db
+      .select({ maxPos: sql<number>`max(${tasks.position})` })
+      .from(tasks)
+      .where(and(eq(tasks.userId, session.user!.id!), isNull(tasks.deletedAt)));
+    resolvedPosition = (maxPos || 0) + 1000; // Increment by 1000 to allow inserting between
+  }
+
   const [task] = await db
     .insert(tasks)
     .values({
@@ -140,6 +153,7 @@ export const POST = withAuth(async (req, session) => {
       status: (status as typeof VALID_STATUSES[number]) ?? "open",
       priority: (priority as typeof VALID_PRIORITIES[number]) ?? "medium",
       dueDate: dueDate as string | undefined,
+      position: resolvedPosition,
       createdAt: now,
       updatedAt: now,
     })

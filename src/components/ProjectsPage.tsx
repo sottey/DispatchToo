@@ -103,6 +103,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     api.projects
       .listWithStats()
@@ -133,6 +134,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     if (searchParams.get("new") !== "1") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditingProject(null);
     setModalOpen(true);
     const params = new URLSearchParams(searchParams.toString());
@@ -178,6 +180,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     if (!selectedId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTasks([]);
       return;
     }

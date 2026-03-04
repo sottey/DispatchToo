@@ -35,7 +35,7 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { title, description, status, priority, dueDate, projectId } = body as Record<string, unknown>;
+  const { title, description, status, priority, dueDate, projectId, position } = body as Record<string, unknown>;
 
   if (title !== undefined && (typeof title !== "string" || title.trim().length === 0)) {
     return errorResponse("title must be a non-empty string", 400);
@@ -73,6 +73,10 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("projectId must be a string or null", 400);
   }
 
+  if (position !== undefined && typeof position !== "number") {
+    return errorResponse("position must be a number", 400);
+  }
+
   let resolvedProjectId: string | null | undefined = undefined;
   if (projectId === null) {
     resolvedProjectId = null;
@@ -104,6 +108,7 @@ export const PUT = withAuth(async (req, session, ctx) => {
   if (priority !== undefined) updates.priority = priority;
   if (dueDate !== undefined) updates.dueDate = dueDate;
   if (projectId !== undefined) updates.projectId = resolvedProjectId;
+  if (position !== undefined) updates.position = position;
 
   const [updated] = await db
     .update(tasks)

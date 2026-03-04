@@ -78,6 +78,7 @@ export function createTestDb() {
       "status" text NOT NULL DEFAULT 'open',
       "priority" text NOT NULL DEFAULT 'medium',
       "dueDate" text,
+      "position" integer NOT NULL DEFAULT 0,
       "deletedAt" text,
       "createdAt" text NOT NULL DEFAULT (current_timestamp),
       "updatedAt" text NOT NULL DEFAULT (current_timestamp)

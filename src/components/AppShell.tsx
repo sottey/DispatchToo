@@ -34,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRouteLoading(true);
     const timer = setTimeout(() => setRouteLoading(false), 420);
     return () => clearTimeout(timer);

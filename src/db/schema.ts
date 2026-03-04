@@ -120,6 +120,7 @@ export const tasks = sqliteTable(
       .notNull()
       .default("medium"),
     dueDate: text("dueDate"),
+    position: integer("position").notNull().default(0),
     deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()

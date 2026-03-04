@@ -44,6 +44,7 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       assistantEnabled: users.assistantEnabled,
       tasksTodayFocusDefault: users.tasksTodayFocusDefault,
       showDispatchHelp: users.showDispatchHelp,
+      displayDispatchNotes: users.displayDispatchNotes,
       notesMetadataCollapsedDefault: users.notesMetadataCollapsedDefault,
       defaultStartNode: users.defaultStartNode,
     })
@@ -71,6 +72,7 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       assistantEnabled: result.assistantEnabled ?? true,
       tasksTodayFocusDefault: result.tasksTodayFocusDefault ?? false,
       showDispatchHelp: result.showDispatchHelp ?? true,
+      displayDispatchNotes: result.displayDispatchNotes ?? true,
       notesMetadataCollapsedDefault: result.notesMetadataCollapsedDefault ?? false,
       defaultStartNode:
         (result.defaultStartNode as
@@ -108,6 +110,7 @@ export function withAuth<TCtx = unknown>(
       session.user.assistantEnabled = session.user.assistantEnabled ?? true;
       session.user.tasksTodayFocusDefault = session.user.tasksTodayFocusDefault ?? false;
       session.user.showDispatchHelp = session.user.showDispatchHelp ?? true;
+      session.user.displayDispatchNotes = session.user.displayDispatchNotes ?? true;
       session.user.notesMetadataCollapsedDefault =
         session.user.notesMetadataCollapsedDefault ?? false;
       session.user.defaultStartNode = session.user.defaultStartNode ?? "dashboard";
@@ -126,6 +129,7 @@ export function withAuth<TCtx = unknown>(
         apiKeySession.user.assistantEnabled = apiKeySession.user.assistantEnabled ?? true;
         apiKeySession.user.tasksTodayFocusDefault = apiKeySession.user.tasksTodayFocusDefault ?? false;
         apiKeySession.user.showDispatchHelp = apiKeySession.user.showDispatchHelp ?? true;
+        apiKeySession.user.displayDispatchNotes = apiKeySession.user.displayDispatchNotes ?? true;
         apiKeySession.user.notesMetadataCollapsedDefault =
           apiKeySession.user.notesMetadataCollapsedDefault ?? false;
         apiKeySession.user.defaultStartNode = apiKeySession.user.defaultStartNode ?? "dashboard";

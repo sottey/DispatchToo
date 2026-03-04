@@ -14,7 +14,15 @@ import { todayDateKey } from "@/lib/datetime";
 import { TaskModal } from "@/components/TaskModal";
 import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
-import { IconCheckCircle, IconPlus, IconPencil, IconTrash } from "@/components/icons";
+import {
+  IconCheckCircle,
+  IconPlus,
+  IconPencil,
+  IconTrash,
+  IconList,
+  IconGrid,
+  IconGripVertical,
+} from "@/components/icons";
 import { PROJECT_COLORS } from "@/lib/projects";
 
 type SortField = "createdAt" | "dueDate" | "priority";
@@ -50,6 +58,7 @@ export function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"list" | "kanban">("list");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">(
     (searchParams.get("status") as TaskStatus) || "",
   );
@@ -205,6 +214,7 @@ export function TasksPage() {
   const filteredTasks = applyCompletedVisibility(todayScopedTasks, showCompleted, completingIds);
 
   const sorted = [...filteredTasks].sort((a, b) => {
+    if (view === "kanban") return 0; // Kanban uses position and status columns
     if (sortBy === "dueDate") {
       if (!a.dueDate && !b.dueDate) return 0;
       if (!a.dueDate) return 1;
@@ -397,16 +407,42 @@ export function TasksPage() {
             )}
           </div>
         </div>
-        <button
-          onClick={() => {
-            setEditingTask(null);
-            setModalOpen(true);
-          }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-sm"
-        >
-          <IconPlus className="w-4 h-4" />
-          New Task
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-lg bg-neutral-100 dark:bg-neutral-800 p-1">
+            <button
+              onClick={() => setView("list")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                view === "list"
+                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              }`}
+            >
+              <IconList className="w-3.5 h-3.5" />
+              List
+            </button>
+            <button
+              onClick={() => setView("kanban")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                view === "kanban"
+                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              }`}
+            >
+              <IconGrid className="w-3.5 h-3.5" />
+              Board
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setEditingTask(null);
+              setModalOpen(true);
+            }}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-sm"
+          >
+            <IconPlus className="w-4 h-4" />
+            New Task
+          </button>
+        </div>
       </div>
 
       {/* Filters & sort */}
@@ -586,6 +622,37 @@ export function TasksPage() {
             </button>
           )}
         </div>
+      ) : view === "kanban" ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {(["open", "in_progress", "done"] as TaskStatus[]).map((status) => (
+            <KanbanColumn
+              key={status}
+              status={status}
+              tasks={tasks.filter((t) => t.status === status)}
+              projectMap={projectMap}
+              onEdit={(task) => {
+                setEditingTask(task);
+                setModalOpen(true);
+              }}
+              onDeleteClick={handleDeleteClick}
+              onDeleteConfirm={handleDeleteConfirm}
+              deletingId={deletingId}
+              onStatusChange={async (task, nextStatus) => {
+                setTasks((prev) =>
+                  prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
+                );
+                try {
+                  await api.tasks.update(task.id, { status: nextStatus });
+                } catch {
+                  setTasks((prev) =>
+                    prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)),
+                  );
+                  toast.error("Failed to update status");
+                }
+              }}
+            />
+          ))}
+        </div>
       ) : (
         <ul className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
           {sorted.map((task, i) => (
@@ -687,6 +754,196 @@ function FilterGroup({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function KanbanColumn({
+  status,
+  tasks,
+  projectMap,
+  onEdit,
+  onDeleteClick,
+  onDeleteConfirm,
+  deletingId,
+  onStatusChange,
+}: {
+  status: TaskStatus;
+  tasks: Task[];
+  projectMap: Map<string, Project>;
+  onEdit: (task: Task) => void;
+  onDeleteClick: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
+  deletingId: string | null;
+  onStatusChange: (task: Task, next: TaskStatus) => void;
+}) {
+  const sortedTasks = [...tasks].sort((a, b) => a.position - b.position);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLES[status].dot}`} />
+          <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            {STATUS_STYLES[status].label}
+          </h3>
+          <span className="text-xs font-bold text-neutral-400 dark:text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
+            {tasks.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 min-h-[200px] rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 p-2 border border-neutral-200/50 dark:border-neutral-800/50">
+        {sortedTasks.map((task) => (
+          <KanbanCard
+            key={task.id}
+            task={task}
+            project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
+            onEdit={() => onEdit(task)}
+            onDeleteClick={() => onDeleteClick(task.id)}
+            onDeleteConfirm={() => onDeleteConfirm(task.id)}
+            deletingConfirm={deletingId === task.id}
+            onStatusChange={onStatusChange}
+          />
+        ))}
+        {tasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-10 opacity-40">
+            <div className="h-10 w-10 rounded-full border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center">
+              <IconPlus className="w-5 h-5 text-neutral-400" />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function KanbanCard({
+  task,
+  project,
+  onEdit,
+  onDeleteClick,
+  onDeleteConfirm,
+  deletingConfirm,
+  onStatusChange,
+}: {
+  task: Task;
+  project: Project | null;
+  onEdit: () => void;
+  onDeleteClick: () => void;
+  onDeleteConfirm: () => void;
+  deletingConfirm: boolean;
+  onStatusChange: (task: Task, next: TaskStatus) => void;
+}) {
+  const nextStatus: Record<TaskStatus, TaskStatus | null> = {
+    open: "in_progress",
+    in_progress: "done",
+    done: null,
+  };
+  const prevStatus: Record<TaskStatus, TaskStatus | null> = {
+    open: null,
+    in_progress: "open",
+    done: "in_progress",
+  };
+
+  const next = nextStatus[task.status];
+  const prev = prevStatus[task.status];
+
+  return (
+    <div
+      onClick={onEdit}
+      className="group relative flex flex-col gap-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-800 transition-all cursor-pointer animate-fade-in"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">
+          {task.title}
+        </p>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-1 text-neutral-400 hover:text-blue-500 dark:hover:text-blue-400"
+            title="Edit task"
+          >
+            <IconPencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              deletingConfirm ? onDeleteConfirm() : onDeleteClick();
+            }}
+            className={`p-1 transition-colors ${
+              deletingConfirm ? "text-red-500" : "text-neutral-400 hover:text-red-500"
+            }`}
+            title={deletingConfirm ? "Confirm delete" : "Delete task"}
+          >
+            <IconTrash className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {task.description && (
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
+          {task.description}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 mt-auto">
+        {project && (
+          <span
+            className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+              PROJECT_COLORS[project.color]?.badge ?? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+            }`}
+          >
+            {project.name}
+          </span>
+        )}
+        <span
+          className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${PRIORITY_BADGE[task.priority]}`}
+        >
+          {task.priority}
+        </span>
+        {task.dueDate && (
+          <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 ml-auto whitespace-nowrap">
+            {task.dueDate}
+          </span>
+        )}
+      </div>
+
+      {/* Quick status move buttons */}
+      <div className="flex items-center border-t border-neutral-100 dark:border-neutral-800 pt-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {prev && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(task, prev);
+            }}
+            className="text-[10px] font-bold text-neutral-400 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-1 transition-colors"
+          >
+            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            {STATUS_STYLES[prev].label}
+          </button>
+        )}
+        <div className="flex-1" />
+        {next && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(task, next);
+            }}
+            className="text-[10px] font-bold text-neutral-400 hover:text-blue-500 dark:hover:text-blue-400 flex items-center gap-1 transition-colors"
+          >
+            {STATUS_STYLES[next].label}
+            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
