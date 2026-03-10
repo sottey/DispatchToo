@@ -16,7 +16,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 import yaml from "js-yaml";
-import { api, type Note } from "@/lib/client";
+import { api, ApiError, type Note } from "@/lib/client";
 import { formatTimestamp } from "@/lib/datetime";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -431,8 +431,8 @@ export function NoteEditor({
         setSaved(true);
         if (savedTimeout.current) clearTimeout(savedTimeout.current);
         savedTimeout.current = setTimeout(() => setSaved(false), 2000);
-      } catch {
-        toast.error("Failed to save note");
+      } catch (error) {
+        toast.error(error instanceof ApiError ? `Failed to save note: ${error.message}` : "Failed to save note");
       } finally {
         setSaving(false);
       }

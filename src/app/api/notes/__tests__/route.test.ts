@@ -211,6 +211,20 @@ Body`,
       expect(res.status).toBe(400);
     });
 
+    it("rejects content longer than 256000 characters", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/notes", "POST", {
+          title: "Too large",
+          content: "a".repeat(256001),
+        }),
+        {}
+      );
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        error: "content must be at most 256000 characters",
+      });
+    });
+
     it("rejects invalid JSON body", async () => {
       const res = await POST(
         new Request("http://localhost/api/notes", {
@@ -560,6 +574,25 @@ Body`,
         ctx(created.id)
       );
       expect(res.status).toBe(400);
+    });
+
+    it("rejects updated content longer than 256000 characters", async () => {
+      const createRes = await POST(
+        jsonReq("http://localhost/api/notes", "POST", { title: "test" }),
+        {}
+      );
+      const created = await createRes.json();
+
+      const res = await PUT(
+        jsonReq(`http://localhost/api/notes/${created.id}`, "PUT", {
+          content: "a".repeat(256001),
+        }),
+        ctx(created.id)
+      );
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        error: "content must be at most 256000 characters",
+      });
     });
   });
 

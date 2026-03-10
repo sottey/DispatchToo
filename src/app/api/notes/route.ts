@@ -13,6 +13,8 @@ type NoteResponse = Omit<typeof notes.$inferSelect, "metadata"> & {
   metadata: Record<string, unknown> | null;
 };
 
+const NOTE_CONTENT_MAX_CHARS = 256000;
+
 function toNoteResponse(note: typeof notes.$inferSelect): NoteResponse {
   const storedMetadata = parseStoredNoteMetadata(note.metadata);
   if (storedMetadata) {
@@ -138,8 +140,8 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("content must be a string", 400);
   }
 
-  if (content && (content as string).length > 100000) {
-    return errorResponse("content must be at most 100000 characters", 400);
+  if (content && (content as string).length > NOTE_CONTENT_MAX_CHARS) {
+    return errorResponse(`content must be at most ${NOTE_CONTENT_MAX_CHARS} characters`, 400);
   }
 
   let frontmatter;
