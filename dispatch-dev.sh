@@ -26,6 +26,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+NODE22_BIN="/opt/homebrew/opt/node@22/bin"
+if [ -x "$NODE22_BIN/node" ]; then
+    export PATH="$NODE22_BIN:$PATH"
+fi
+
 # ── Version ───────────────────────────────────────────────────
 VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
 

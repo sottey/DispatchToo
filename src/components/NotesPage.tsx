@@ -92,7 +92,7 @@ export function NotesPage({
   async function handleCreate() {
     try {
       const note = await api.notes.create({ title: "Untitled Note" });
-      router.push(`/notes/${note.id}`);
+      router.push(`/notes/${note.id}?edit=1`);
     } catch {
       toast.error("Failed to create note");
     }

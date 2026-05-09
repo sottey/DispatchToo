@@ -364,9 +364,11 @@ function normalizeMetadataTags(value: unknown): string[] {
 export function NoteEditor({
   noteId,
   notesMetadataCollapsedDefault = false,
+  startInEditMode = false,
 }: {
   noteId: string;
   notesMetadataCollapsedDefault?: boolean;
+  startInEditMode?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -376,7 +378,7 @@ export function NoteEditor({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const [mode, setMode] = useState<"preview" | "edit">(startInEditMode ? "edit" : "preview");
   const [notFound, setNotFound] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
