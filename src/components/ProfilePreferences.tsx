@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/components/ToastProvider";
-import { api, type AIConfig, type AIModelInfo, type AIProvider, type DefaultStartNode } from "@/lib/client";
-import { IconKey, IconMoon, IconSparkles, IconSun } from "@/components/icons";
+import {
+  api,
+  type AIConfig,
+  type AIModelInfo,
+  type AIProvider,
+  type DefaultStartNode,
+  type NoteImportFilePayload,
+} from "@/lib/client";
+import { IconDocument, IconKey, IconMoon, IconSparkles, IconSun } from "@/components/icons";
 import { CustomSelect } from "@/components/CustomSelect";
 
 const PROVIDER_OPTIONS: Array<{ value: AIProvider; label: string }> = [
@@ -44,6 +51,18 @@ const DEFAULT_START_NODE_OPTIONS: Array<{ value: DefaultStartNode; label: string
   { value: "insights", label: "Insights" },
   { value: "projects", label: "All Projects" },
 ];
+
+const NOTE_IMPORT_MAX_FILES = 1000;
+const NOTE_IMPORT_BATCH_SIZE = 50;
+
+type ImportProgress = {
+  phase: "idle" | "preparing" | "importing" | "done";
+  total: number;
+  processed: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+};
 
 export function ProfilePreferences({
   isAdmin = false,
@@ -99,6 +118,20 @@ export function ProfilePreferences({
   const [shareAiApiKeyWithUsers, setShareAiApiKeyWithUsers] = useState(false);
   const [loadingAiKeySharing, setLoadingAiKeySharing] = useState(false);
   const [savingAiKeySharing, setSavingAiKeySharing] = useState(false);
+  const [importProgress, setImportProgress] = useState<ImportProgress>({
+    phase: "idle",
+    total: 0,
+    processed: 0,
+    imported: 0,
+    skipped: 0,
+    failed: 0,
+  });
+  const [importSummary, setImportSummary] = useState<{
+    imported: number;
+    skipped: number;
+    failed: number;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const providerRequiresApiKey = useMemo(
     () => provider === "openai" || provider === "anthropic" || provider === "google",
@@ -377,6 +410,100 @@ export function ProfilePreferences({
     }
   }
 
+  async function handleImportFolderSelection(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    const markdownFiles = selectedFiles.filter((file) => file.name.toLowerCase().endsWith(".md"));
+    if (markdownFiles.length === 0) {
+      toast.info("No markdown files found in the selected folder");
+      return;
+    }
+
+    if (markdownFiles.length > NOTE_IMPORT_MAX_FILES) {
+      toast.error(
+        `Import aborted: ${markdownFiles.length} markdown files selected. Maximum is ${NOTE_IMPORT_MAX_FILES}.`,
+      );
+      return;
+    }
+
+    setImportSummary(null);
+    setImportProgress({
+      phase: "preparing",
+      total: markdownFiles.length,
+      processed: 0,
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+    });
+
+    try {
+      const preparedFiles: NoteImportFilePayload[] = [];
+      for (const file of markdownFiles) {
+        const relativePath =
+          "webkitRelativePath" in file && typeof file.webkitRelativePath === "string"
+            ? file.webkitRelativePath
+            : file.name;
+        preparedFiles.push({
+          relativePath,
+          content: await file.text(),
+        });
+      }
+
+      let processed = 0;
+      let imported = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      setImportProgress((current) => ({ ...current, phase: "importing" }));
+
+      for (let index = 0; index < preparedFiles.length; index += NOTE_IMPORT_BATCH_SIZE) {
+        const batch = preparedFiles.slice(index, index + NOTE_IMPORT_BATCH_SIZE);
+        const result = await api.notes.importBatch(batch);
+
+        processed += batch.length;
+        imported += result.imported;
+        skipped += result.skipped;
+        failed += result.failed;
+
+        setImportProgress({
+          phase: "importing",
+          total: preparedFiles.length,
+          processed,
+          imported,
+          skipped,
+          failed,
+        });
+      }
+
+      setImportProgress({
+        phase: "done",
+        total: preparedFiles.length,
+        processed: preparedFiles.length,
+        imported,
+        skipped,
+        failed,
+      });
+      setImportSummary({ imported, skipped, failed });
+
+      if (failed > 0) {
+        toast.info(`Import finished: ${imported} imported, ${skipped} skipped, ${failed} failed`);
+      } else {
+        toast.success(`Import finished: ${imported} imported, ${skipped} skipped`);
+      }
+    } catch (error) {
+      setImportProgress({
+        phase: "idle",
+        total: 0,
+        processed: 0,
+        imported: 0,
+        skipped: 0,
+        failed: 0,
+      });
+      toast.error(error instanceof Error ? error.message : "Failed to import notes");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-4">
@@ -553,6 +680,65 @@ export function ProfilePreferences({
           <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
             Selected node opens by default when launching the app.
           </p>
+        </div>
+
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Import Markdown Folder</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                Import up to 1,000 `.md` files from a local folder. Titles use filenames, folder paths are stored in `folderId`, and duplicates are skipped by exact relative path.
+              </p>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importProgress.phase === "preparing" || importProgress.phase === "importing"}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-95 disabled:opacity-60"
+            >
+              <IconDocument className="h-4 w-4" />
+              {importProgress.phase === "preparing" || importProgress.phase === "importing"
+                ? "Importing..."
+                : "Choose Folder"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(event) => void handleImportFolderSelection(event)}
+              className="hidden"
+              {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+            />
+          </div>
+
+          {importProgress.phase !== "idle" && (
+            <div className="space-y-2">
+              <div className="h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all"
+                  style={{
+                    width:
+                      importProgress.total > 0
+                        ? `${Math.round((importProgress.processed / importProgress.total) * 100)}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                <span>
+                  {importProgress.phase === "preparing" ? "Preparing" : "Processed"} {importProgress.processed}/{importProgress.total}
+                </span>
+                <span>Imported {importProgress.imported}</span>
+                <span>Skipped {importProgress.skipped}</span>
+                <span>Failed {importProgress.failed}</span>
+              </div>
+            </div>
+          )}
+
+          {importSummary && (
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+              Last import: {importSummary.imported} imported, {importSummary.skipped} skipped, {importSummary.failed} failed.
+            </p>
+          )}
         </div>
       </div>
 

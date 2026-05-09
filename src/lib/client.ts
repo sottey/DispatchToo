@@ -63,6 +63,20 @@ export interface NoteTagSummary {
   count: number;
 }
 
+export interface NoteImportFilePayload {
+  relativePath: string;
+  content: string;
+}
+
+export interface NoteImportBatchResponse {
+  imported: number;
+  skipped: number;
+  failed: number;
+  importedNotes: Note[];
+  skippedPaths: string[];
+  failures: Array<{ relativePath: string; error: string }>;
+}
+
 export interface Dispatch {
   id: string;
   userId: string;
@@ -457,6 +471,17 @@ export const api = {
     delete: (id: string) =>
       request<{ deleted: true }>(`/notes/${id}`, { method: "DELETE" }).then((result) => {
         emitNotesChanged({ action: "delete", noteId: id });
+        return result;
+      }),
+
+    importBatch: (files: NoteImportFilePayload[]) =>
+      request<NoteImportBatchResponse>("/notes/import", {
+        method: "POST",
+        body: JSON.stringify({ files }),
+      }).then((result) => {
+        if (result.imported > 0) {
+          emitNotesChanged({ action: "create" });
+        }
         return result;
       }),
 
